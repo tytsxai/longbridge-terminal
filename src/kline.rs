@@ -172,7 +172,7 @@ impl KlineStore {
         let trade_session = longport::quote::TradeSessions::All;
 
         tracing::info!(
-            "Requesting candlestick data: counter={}, period={:?}, count={}, adjust={:?}",
+            "请求 K 线数据：标的={}, 周期={:?}, 数量={}, 复权={:?}",
             counter,
             period,
             count,
@@ -195,7 +195,7 @@ impl KlineStore {
         {
             Ok(candlesticks) => {
                 tracing::info!(
-                    "Successfully fetched candlestick data: counter={}, count={}",
+                    "成功获取 K 线数据：标的={}, 数量={}",
                     counter,
                     candlesticks.len()
                 );
@@ -219,7 +219,7 @@ impl KlineStore {
 
                 if !klines.is_empty() {
                     tracing::debug!(
-                        "First candlestick: open={}, high={}, low={}, close={}, volume={}",
+                        "首条 K 线：开={}, 高={}, 低={}, 收={}, 量={}",
                         klines[0].open,
                         klines[0].high,
                         klines[0].low,
@@ -232,11 +232,7 @@ impl KlineStore {
                 KLINES.update(counter, kline_type, adjust_type, klines, has_more);
             }
             Err(e) => {
-                tracing::error!(
-                    "Failed to request candlestick data: counter={}, error={}",
-                    counter,
-                    e
-                );
+                tracing::error!("请求 K 线数据失败：标的={}, 错误={}", counter, e);
             }
         }
     }

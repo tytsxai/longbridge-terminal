@@ -78,7 +78,7 @@ pub async fn init_contexts(
         .set(RateLimitedTradeContext::new(trade_ref))
         .map_err(|_| anyhow::anyhow!("RateLimitedTradeContext already initialized"))?;
 
-    tracing::info!("Rate limiter initialized: 10 requests/second, burst capacity: 20");
+    tracing::info!("限流器已初始化：每秒 10 次请求，突发容量 20");
 
     // Wrap as Stream
     Ok(tokio_stream::wrappers::UnboundedReceiverStream::new(

@@ -85,7 +85,7 @@ async fn main() {
         pid = std::process::id(),
         locale = %locale,
         log_dir = %logger::active_log_dir().display(),
-        "App started"
+        "应用启动"
     );
 
     let missing_env = openapi::missing_required_env();
@@ -106,7 +106,7 @@ async fn main() {
         }
     };
 
-    tracing::info!("OpenAPI initialized successfully");
+    tracing::info!("OpenAPI 初始化成功");
 
     // Set up panic hook to restore terminal
     let hook = std::panic::take_hook();
@@ -124,10 +124,10 @@ async fn main() {
     Terminal::enter_full_screen();
     tokio::select! {
         _ = app::run(args, quote_receiver) => {
-            tracing::info!("Application loop exited");
+            tracing::info!("应用主循环已退出");
         }
         _ = wait_for_shutdown_signal() => {
-            tracing::warn!("Received shutdown signal, exiting");
+            tracing::warn!("收到退出信号，正在退出");
         }
     }
     Terminal::exit_full_screen();

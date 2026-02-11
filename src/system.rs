@@ -135,7 +135,7 @@ pub async fn fetch_watchlist(
             }
 
             tracing::info!(
-                "Fetched {} groups, {} stocks total (filtered by group: {:?})",
+                "已获取 {} 个分组，共 {} 只股票（筛选分组：{:?}）",
                 groups.len(),
                 counters.len(),
                 group_id
@@ -163,7 +163,7 @@ pub async fn fetch_holdings() -> anyhow::Result<Vec<Counter>> {
             Ok(counters)
         }
         Err(e) => {
-            tracing::error!("Failed to fetch holdings: {}", e);
+            tracing::error!("获取持仓失败：{}", e);
             Ok(vec![])
         }
     }
@@ -191,7 +191,7 @@ pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decima
             .iter()
             .fold(Decimal::ZERO, |acc, b| acc + b.total_cash),
         Err(e) => {
-            tracing::error!("Failed to fetch account balance: {}", e);
+            tracing::error!("获取账户余额失败：{}", e);
             Decimal::ZERO
         }
     };
@@ -219,7 +219,7 @@ pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decima
             positions
         }
         Err(e) => {
-            tracing::error!("Failed to fetch positions: {}", e);
+            tracing::error!("获取持仓明细失败：{}", e);
             vec![]
         }
     };
@@ -484,7 +484,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
                 }
             }
             Err(err) => {
-                tracing::error!("fail to fetch watchlist: {err}");
+                tracing::error!("获取自选列表失败：{err}");
                 return;
             }
         }
@@ -516,7 +516,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
                     for quote in quotes {
                         // Debug: log trade_status from API
                         tracing::debug!(
-                            "API quote for {}: trade_status = {:?}",
+                            "API 行情 {} 的交易状态 = {:?}",
                             quote.symbol,
                             quote.trade_status
                         );
@@ -530,7 +530,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
                     }
                 }
                 Err(e) => {
-                    tracing::error!("Failed to fetch initial quotes: {}", e);
+                    tracing::error!("获取初始行情失败：{}", e);
                 }
             }
 
@@ -548,7 +548,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
                     }
                 }
                 Err(e) => {
-                    tracing::error!("Failed to fetch stock static info: {}", e);
+                    tracing::error!("获取股票静态信息失败：{}", e);
                 }
             }
         }
@@ -638,14 +638,11 @@ pub fn refresh_stock_debounced(counter: Counter) {
 
             // Try to acquire the execution lock (RAII guard)
             let Some(_guard) = RefreshGuard::try_acquire() else {
-                tracing::debug!(
-                    "Skipping refresh for {} - another refresh is in progress",
-                    counter
-                );
+                tracing::debug!("跳过刷新 {}：已有其他刷新任务在执行", counter);
                 return;
             };
 
-            tracing::debug!("Starting refresh for {}", counter);
+            tracing::debug!("开始刷新 {}", counter);
 
             // Execute the actual refresh
             KLINES.clear();
@@ -690,7 +687,7 @@ pub fn refresh_stock_debounced(counter: Counter) {
                 });
             }
 
-            tracing::debug!("Completed refresh for {}", counter);
+            tracing::debug!("完成刷新 {}", counter);
 
             // The _guard will be dropped here, automatically clearing REFRESH_EXECUTING
         });
@@ -718,11 +715,11 @@ pub static PORTFOLIO_VIEW: std::sync::LazyLock<
 // Refresh Portfolio data
 pub fn refresh_portfolio() {
     RT.get().unwrap().spawn(async move {
-        tracing::info!("Starting to refresh Portfolio data...");
+        tracing::info!("开始刷新资产数据...");
         match crate::api::account::fetch_portfolio().await {
             Ok(view) => {
                 tracing::info!(
-                    "Successfully fetched Portfolio: {} holdings, total asset: {}",
+                    "成功获取资产数据：{} 条持仓，总资产 {}",
                     view.holdings.len(),
                     view.overview.total_asset
                 );
@@ -730,7 +727,7 @@ pub fn refresh_portfolio() {
                 *PORTFOLIO_VIEW.write().expect("poison") = Some(view);
             }
             Err(e) => {
-                tracing::error!("Failed to fetch Portfolio data: {}", e);
+                tracing::error!("获取资产数据失败：{}", e);
             }
         }
     });

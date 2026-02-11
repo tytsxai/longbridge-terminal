@@ -14,13 +14,10 @@ pub async fn fetch_account_list() -> Result<AccountList> {
     // Note: This call may fail (if Access Token lacks trading permission), but should not block app startup
     match openapi::helpers::get_account_balance(None).await {
         Ok(_balance) => {
-            tracing::info!("Successfully fetched account balance");
+            tracing::info!("账户余额获取成功");
         }
         Err(e) => {
-            tracing::warn!(
-                "Failed to fetch account balance (may lack trading permission): {}",
-                e
-            );
+            tracing::warn!("获取账户余额失败（可能缺少交易权限）：{}", e);
             // Continue execution, do not block app startup
         }
     }

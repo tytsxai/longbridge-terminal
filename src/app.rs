@@ -78,7 +78,7 @@ pub async fn run(
                 .await
             {
                 Ok(quotes) => {
-                    tracing::info!("Fetched {} index quotes", quotes.len());
+                    tracing::info!("已获取 {} 条指数行情", quotes.len());
                     for quote in quotes {
                         let counter = Counter::new(&quote.symbol);
                         let mut stock = crate::data::Stock::new(counter);
@@ -87,7 +87,7 @@ pub async fn run(
                     }
                 }
                 Err(e) => {
-                    tracing::error!("Failed to fetch index quotes: {}", e);
+                    tracing::error!("获取指数行情失败：{}", e);
                 }
             }
 
@@ -105,9 +105,9 @@ pub async fn run(
                 })
                 .await
             {
-                tracing::error!("Failed to subscribe indexes: {}", e);
+                tracing::error!("订阅指数失败：{}", e);
             } else {
-                tracing::info!("Successfully subscribed to {} indexes", symbols.len());
+                tracing::info!("成功订阅 {} 个指数", symbols.len());
             }
         }
     });
@@ -196,12 +196,12 @@ pub async fn run(
     tokio::spawn({
         let tx = update_tx.clone();
         async move {
-            tracing::info!("Fetching account list...");
+            tracing::info!("正在获取账户列表...");
             match crate::api::account::fetch_account_list().await {
                 Ok(accounts) => {
-                    tracing::info!("Successfully fetched {} accounts", accounts.status.len());
+                    tracing::info!("成功获取 {} 个账户", accounts.status.len());
                     if accounts.status.is_empty() {
-                        tracing::error!("no account found");
+                        tracing::error!("未找到可用账户");
                         let mut queue = CommandQueue::default();
                         queue.push(InsertResource {
                             resource: Content::new(
@@ -259,11 +259,11 @@ pub async fn run(
                     _ = tx.send(queue);
 
                     // Load watchlist data
-                    tracing::info!("Loading watchlist data...");
+                    tracing::info!("正在加载自选列表数据...");
                     system::refresh_watchlist(tx.clone());
                 }
                 Err(e) => {
-                    tracing::error!("Failed to fetch account list: {}", e);
+                    tracing::error!("获取账户列表失败：{}", e);
                     let mut queue = CommandQueue::default();
                     queue.push(InsertResource {
                         resource: Content::new(t!("error.api.heading"), e.to_string()),
@@ -389,7 +389,7 @@ pub async fn run(
                  match push_event.detail {
                      PushEventDetail::Quote(quote) => {
                          tracing::debug!(
-                             "Update quote: {} = {}, trade_session = {:?}",
+                             "行情更新：{} = {}，交易时段 = {:?}",
                              symbol,
                              quote.last_done,
                              quote.trade_session
@@ -402,7 +402,7 @@ pub async fn run(
                          render_state.mark_dirty(DirtyFlags::NONE.mark_quote_update());
                      }
                      PushEventDetail::Depth(depth) => {
-                         tracing::debug!("Update depth: {}", symbol);
+                         tracing::debug!("深度更新：{}", symbol);
                          crate::data::STOCKS.modify(counter, |stock| {
                              use rust_decimal::Decimal;
                              // PushDepth structure may differ from SecurityDepth, update manually
@@ -436,7 +436,7 @@ pub async fn run(
                         continue
                     },
                     Err(err) => {
-                        tracing::error!("fail to receive event: {err}");
+                        tracing::error!("接收事件失败：{err}");
                         app.world.insert_resource(Content::new(
                             t!("qrcode_view.error.heading"),
                             t!("qrcode_view.error.content"),
