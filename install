@@ -1,0 +1,117 @@
+#!/usr/bin/env sh
+set -eu
+type curl > /dev/null || { echo "未找到 curl，请先安装 curl。"; exit 1; }
+
+repo='longbridge/longbridge-terminal'
+
+get_latest_release() {
+  curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
+    grep '"tag_name":' |                                               # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                                       # Pluck JSON value
+}
+
+bin_name='longbridge'
+package_name='longbridge-terminal'
+default_version='v0.7.0-preview0'
+
+latest_version="$(get_latest_release || true)"
+version="${LONGBRIDGE_VERSION:-$latest_version}"
+if [ -z "$version" ]; then
+  version="$default_version"
+fi
+
+sha256_of() {
+  file="$1"
+
+  if command -v sha256sum > /dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+
+  if command -v shasum > /dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+
+  if command -v openssl > /dev/null 2>&1; then
+    openssl dgst -sha256 "$file" | awk '{print $NF}'
+    return
+  fi
+
+  echo "未找到 sha256 校验工具（sha256sum/shasum/openssl）。" >&2
+  exit 1
+}
+
+tmp_dir="$(mktemp -d -t longbridge-install.XXXXXX)"
+cleanup() {
+  rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+platform="$(uname | tr "[A-Z]" "[a-z]")"  # Linux => linux
+arch="$(uname -m)"  # x86_64, arm64, aarch64, etc.
+
+# Normalize architecture names
+case "$arch" in
+  x86_64)
+    arch="amd64"
+    ;;
+  aarch64)
+    arch="arm64"
+    ;;
+  arm64)
+    arch="arm64"
+    ;;
+esac
+
+echo "正在下载 $package_name@$version ..."
+
+# Detect musl libc on Linux
+libc=''
+if [ "$platform" = "linux" ]; then
+  if ldd --version 2>&1 | grep -q 'musl'; then
+    libc='-musl'
+  fi
+fi
+
+download_url=https://github.com/$repo/releases/download/$version/$package_name-$platform$libc-$arch.tar.gz
+checksum_url="$download_url.sha256"
+echo "下载地址: $download_url"
+
+curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz" "$download_url"
+curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz.sha256" "$checksum_url"
+
+expected_checksum="$(awk 'NF{print $1; exit}' "$tmp_dir/$bin_name.tar.gz.sha256" | tr -d '\r\n')"
+actual_checksum="$(sha256_of "$tmp_dir/$bin_name.tar.gz")"
+
+if [ -z "$expected_checksum" ]; then
+  echo "校验失败：未读取到有效的 sha256 值。" >&2
+  exit 1
+fi
+
+if [ "$expected_checksum" != "$actual_checksum" ]; then
+  echo "校验失败：下载文件 sha256 不匹配。" >&2
+  echo "expected: $expected_checksum" >&2
+  echo "actual:   $actual_checksum" >&2
+  exit 1
+fi
+
+echo "sha256 校验通过。"
+
+tar zxf "$tmp_dir/$bin_name.tar.gz" -C "$tmp_dir"
+
+if [ ! -f "$tmp_dir/$bin_name" ]; then
+  echo "安装失败：压缩包中未找到可执行文件 $bin_name。" >&2
+  exit 1
+fi
+
+if test $(id -u) -eq 0; then
+  install -m 0755 "$tmp_dir/$bin_name" "/usr/local/bin/$bin_name"
+else
+  sudo install -m 0755 "$tmp_dir/$bin_name" "/usr/local/bin/$bin_name"
+fi
+
+echo "Longbridge Terminal $version 安装成功。"
+echo ""
+echo "你可以使用 \`longbridge --help\` 查看帮助。"
+echo ""
