@@ -1530,7 +1530,7 @@ fn stock_detail(
         // Show loading hint if no data
         if samples.is_empty() {
             frame.render_widget(
-                Paragraph::new("Loading...").alignment(Alignment::Center),
+                Paragraph::new(t!("Loading.General")).alignment(Alignment::Center),
                 area,
             );
         } else {
@@ -1614,7 +1614,7 @@ fn stock_detail(
         if stock.trades.is_empty() {
             // Show loading hint
             frame.render_widget(
-                Paragraph::new("Loading...").alignment(Alignment::Center),
+                Paragraph::new(t!("Loading.General")).alignment(Alignment::Center),
                 inner_area,
             );
         } else {
@@ -2119,7 +2119,7 @@ pub fn render_portfolio(
         let Some(portfolio_view) = &*portfolio_view_lock else {
             // Show loading message if no data yet
             frame.render_widget(
-                Paragraph::new("Loading portfolio data...")
+                Paragraph::new(t!("Portfolio.Loading"))
                     .alignment(Alignment::Center)
                     .block(
                         Block::default()
@@ -2259,12 +2259,15 @@ pub fn render_portfolio(
                     Span::styled(format!("{:.2}", overview.credit_limit), styles::text()),
                 ])),
                 ListItem::new(Line::from(vec![
-                    Span::styled("Holdings: ", styles::label()),
+                    Span::styled(
+                        format!("{}: ", t!("Portfolio.HoldingsCount")),
+                        styles::label(),
+                    ),
                     Span::styled(format!("{}", holdings.len()), styles::text()),
                 ])),
                 ListItem::new(""),
                 ListItem::new(Span::styled(
-                    "Press R to refresh",
+                    t!("Portfolio.RefreshHint"),
                     Style::default().fg(Color::Gray),
                 )),
             ];

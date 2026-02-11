@@ -45,7 +45,7 @@ impl Default for Account {
         Self {
             account_channel: String::new(),
             aaid: String::new(),
-            account_name: "Default Account".to_string(),
+            account_name: t!("Account.DefaultName").to_string(),
             account_type: "CashAccount".to_string(),
             org: OrgInfo {
                 name: "Longbridge".to_string(),

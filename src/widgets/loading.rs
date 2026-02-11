@@ -27,15 +27,14 @@ impl From<&Loading> for LoadingWidget {
 
 impl Widget for LoadingWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let text = match self.index % 6 {
-            1 => "◰ LOADING.  ",
-            2 => "◳ LOADING.. ",
-            3 => "◲ LOADING...",
-            4 => "◲ LOADING ..",
-            5 => "◱ LOADING  .",
-            _ => "◰ LOADING   ",
+        let spinner = match self.index % 4 {
+            0 => "◰",
+            1 => "◳",
+            2 => "◲",
+            _ => "◱",
         };
-        let area = crate::ui::rect::centered(12, 1, area);
+        let text = format!("{spinner} {}", t!("Loading.General"));
+        let area = crate::ui::rect::centered(16, 1, area);
         Paragraph::new(text).render(area, buf);
     }
 }

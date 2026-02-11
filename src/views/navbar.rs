@@ -28,7 +28,7 @@ pub fn render(frame: &mut Frame, rect: Rect, state: AppState) {
         });
 
     // Simplified implementation: use fixed username
-    let nickname = "User".to_string();
+    let nickname = t!("User.Guest").to_string();
     let dark_gray_style = styles::dark_gray();
     let name = Span::styled(t!("Welcome, %{name}", name = nickname), dark_gray_style);
     let help = Span::styled(t!("Keyboard.Help"), dark_gray_style);

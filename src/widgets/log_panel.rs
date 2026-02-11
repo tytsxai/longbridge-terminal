@@ -111,7 +111,7 @@ impl LogPanel {
 
         // Render log panel with background
         let block = Block::default()
-            .title(" Debug Log [`] ")
+            .title(format!(" {} ", t!("Keyboard.Console")))
             .bg(Color::Black)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow))

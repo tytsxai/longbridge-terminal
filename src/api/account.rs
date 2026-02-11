@@ -29,7 +29,7 @@ pub async fn fetch_account_list() -> Result<AccountList> {
     let account = Account {
         account_channel: "lb".to_string(),
         aaid: String::new(),
-        account_name: "Default Account".to_string(),
+        account_name: t!("Account.DefaultName").to_string(),
         account_type: "CashAccount".to_string(),
         org: crate::data::OrgInfo {
             name: "Longbridge".to_string(),
