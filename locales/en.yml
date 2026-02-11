@@ -63,6 +63,12 @@ Keyboard.Scroll: Scroll [↑↓]
 Keyboard.Console: Console [`]
 "Welcome, %{name}": "Hi, %{name}"
 stock counter id must be valid: "Stock counter id must be valid"
+Loading.General: "Loading..."
+Portfolio.Loading: "Loading portfolio data..."
+Portfolio.HoldingsCount: "Holdings"
+Portfolio.RefreshHint: "Press R to refresh"
+User.Guest: "User"
+Account.DefaultName: "Default Account"
 watchlist.CHG: "CHG"
 watchlist.CODE: "CODE"
 watchlist.NAME: "NAME"

@@ -44,7 +44,7 @@ Scan the QR code to finish signing in: "掃描二維碼以完成登錄"
 Signing in...: "登錄中..."
 "Please wait...": "請稍後..."
 Stock.SharesSuffix: "股"
-Console.Title: " Console "
+Console.Title: " 日誌 "
 Update: " 更新 "
 Downloading: "下載中"
 tabs.Portfolio: 資產概覽
@@ -63,6 +63,12 @@ Keyboard.Scroll: 滾動 [↑↓]
 Keyboard.Console: 日誌 [`]
 "Welcome, %{name}": "歡迎，%{name}"
 stock counter id must be valid: "CounterID 不正確"
+Loading.General: "載入中..."
+Portfolio.Loading: "正在載入資產數據..."
+Portfolio.HoldingsCount: "持倉"
+Portfolio.RefreshHint: "按 R 刷新"
+User.Guest: "用戶"
+Account.DefaultName: "預設賬戶"
 watchlist.CHG: "漲跌幅"
 watchlist.CODE: "代碼"
 watchlist.NAME: "名稱"
@@ -76,8 +82,9 @@ watchlist_group.hk: "港股"
 watchlist_group.cn: "A股"
 watchlist_group.sg: "新加坡"
 watchlist_group.jp: "日本"
-watchlist_group.uk: "英国"
-watchlist_group.de: "德国"
+watchlist_group.uk: "英國"
+watchlist_group.de: "德國"
+watchlist_group.na: "未上市"
 StockDetail.52wk High: 52 周高
 StockDetail.52wk Low: 52 周低
 StockDetail.Amplitude: 振幅
@@ -118,6 +125,7 @@ Portfolio.Risk Level: 風控狀態
 Portfolio.Credit Limit: 融資額度
 Portfolio.Health Status: 槓桿
 Portfolio.Fund Market Cap: 基金市值
+Portfolio.No Holdings: 暫無持倉數據
 Holding.Code: 代碼
 Holding.Cost Price: 成本價
 Holding.Hold Ratio: 佔比%
@@ -169,8 +177,14 @@ RiskLevel.Warning: 預警
 TradeStatus.Normal: ""
 TradeStatus.Halted: 停牌
 TradeStatus.Delisted: 退市
-TradeStatus.STOP: 休市
-TradeStatus.UsStop: 休市
+TradeStatus.Fuse: 熔斷
+TradeStatus.PrepareList: 準備上市
+TradeStatus.CodeMoved: 代碼變更
+TradeStatus.ToBeOpened: 即將開盤
+TradeStatus.SplitStockHalts: 分拆停牌
+TradeStatus.Expired: 已過期
+TradeStatus.WarrantPrepareList: 權證準備中
+TradeStatus.SuspendTrade: 暫停交易
 TradeSession.Intraday: 交易中
 TradeSession.Pre: 盤前
 TradeSession.Post: 盤後
