@@ -1,201 +1,123 @@
-# Contributing to Longbridge Terminal
+# Longbridge Terminal 贡献指南
 
-Thank you for your interest in contributing to Longbridge Terminal! This document provides guidelines and instructions for contributing.
+感谢你关注并参与 Longbridge Terminal！本文档说明本仓库的开发约定、提交流程与质量要求。
 
-## Getting Started
+## 快速开始
 
-### Prerequisites
+### 环境要求
 
-- Rust toolchain (latest stable version)
-- Longport OpenAPI credentials ([Get them here](https://open.longbridge.com))
-- macOS or Linux
+- Rust 工具链（建议使用最新 stable）
+- Longport OpenAPI 凭证（可在 https://open.longbridge.com 获取）
+- macOS 或 Linux
 
-### Setup Development Environment
+### 本地启动
 
-1. **Clone the repository**:
+1. 克隆仓库：
+
    ```bash
    git clone https://github.com/longbridge/longbridge-terminal.git
    cd longbridge-terminal
    ```
 
-2. **Configure API credentials**:
+2. 配置凭证：
+
    ```bash
    cp .env.example .env
-   # Edit .env with your Longport OpenAPI credentials
+   # 编辑 .env，填入 LONGPORT_APP_KEY / LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN
    ```
 
-3. **Build and run**:
+3. 运行程序：
+
    ```bash
    cargo run
    ```
 
-## Code Style and Guidelines
+## 代码规范
 
-### Language Requirements
+### 文案与国际化
 
-**IMPORTANT**: All code comments and documentation MUST be written in English only.
+- 用户可见文案必须通过 `rust-i18n` 的 `t!` 宏读取，不要在代码里硬编码显示文本。
+- 新增文案时需同时更新：
+  - `locales/en.yml`
+  - `locales/zh-CN.yml`
+  - `locales/zh-HK.yml`
+- 代码注释保持简洁、可读，优先与现有代码风格一致。
 
-- ❌ **Never** write Chinese or other non-English text in code comments
-- ❌ **Never** hardcode Chinese strings directly in code
-- ✅ Use `rust-i18n` (`t!` macro) for all user-facing text
-- ✅ All locale strings must be defined in `locales/*.yml` files
+示例：
 
-**Example**:
 ```rust
-// ✅ Good: English comment with i18n
 let status = t!("TradeStatus.Normal");
-
-// ❌ Bad: Chinese comment or hardcoded string
-// let status = "交易中";
 ```
 
-### Naming Conventions
+### 命名约定
 
-- **Types**: `UpperCamelCase` (e.g., `QuoteData`, `TradeStatus`)
-- **Functions and variables**: `snake_case` (e.g., `update_from_quote`, `stock_count`)
-- **Constants**: `SCREAMING_SNAKE_CASE` (e.g., `STOCKS`, `DEFAULT_TIMEOUT`)
+- 类型：`UpperCamelCase`
+- 函数/变量：`snake_case`
+- 常量：`SCREAMING_SNAKE_CASE`
 
-### Clippy Rules
+### 静态检查
 
-This project uses strict `clippy::pedantic` rules. Run the following before submitting:
+提交前至少执行：
 
 ```bash
-cargo clippy --all-targets --all-features
+cargo fmt --all -- --check
+cargo clippy -- -D warnings
+cargo test
 ```
 
-The following pedantic rules are allowed (you don't need to fix them):
-- `cast_possible_truncation`
-- `ignored_unit_patterns`
-- `implicit_hasher`
-- `missing_errors_doc` / `missing_panics_doc`
-- `module_name_repetitions`
-- `must_use_candidate`
-- `needless_pass_by_value`
-- `too_many_arguments` / `too_many_lines`
+项目启用了较严格的 `clippy::pedantic` 策略；如需放宽规则，请在 PR 中明确说明原因与影响。
 
-### Code Formatting
+## 提交流程
 
-Format your code with:
+1. 新建分支（建议）：
 
-```bash
-cargo fmt
-```
-
-## Adding Translations
-
-When adding new user-facing text:
-
-1. **Add the translation key to all locale files**:
-   - `locales/en.yml` (English)
-   - `locales/zh-CN.yml` (Simplified Chinese)
-   - `locales/zh-HK.yml` (Traditional Chinese)
-
-2. **Use the `t!` macro in code**:
-   ```rust
-   use rust_i18n::t;
-
-   let message = t!("your.translation.key");
-   ```
-
-**Example**:
-
-```yaml
-# locales/en.yml
-Portfolio:
-  TotalAssets: "Total Assets"
-
-# locales/zh-CN.yml
-Portfolio:
-  TotalAssets: "总资产"
-
-# locales/zh-HK.yml
-Portfolio:
-  TotalAssets: "總資產"
-```
-
-## Architecture Overview
-
-### Key Components
-
-- **`src/openapi/`**: Longport OpenAPI integration layer
-  - `context.rs`: Global QuoteContext and TradeContext management
-- **`src/data/`**: Data models and global state
-  - `stocks.rs`: Global stock cache using DashMap
-- **`src/app.rs`**: Main application loop using Bevy ECS
-- **`src/system.rs`**: UI rendering and user input handling
-- **`src/widgets/`** and **`src/views/`**: UI components
-
-### Data Flow
-
-```
-Initialization → Subscribe Quotes → WebSocket Push → Update Cache → Render UI
-```
-
-For more details, see [CLAUDE.md](./CLAUDE.md).
-
-## Pull Request Process
-
-1. **Fork the repository** and create a new branch:
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b feature/your-change
    ```
 
-2. **Make your changes** following the code style guidelines
+2. 按模块完成改动并自测通过。
 
-3. **Run checks**:
-   ```bash
-   cargo fmt
-   cargo clippy --all-targets --all-features
-   cargo build
-   ```
+3. 提交变更：
 
-4. **Commit your changes**:
-   - Write clear, descriptive commit messages in English
-   - Reference issue numbers if applicable
+   - 提交信息要清晰描述目的与范围
+   - 避免把不相关改动混在同一次提交
 
-5. **Push and create a Pull Request**:
-   - Provide a clear description of the changes
-   - Explain why the changes are needed
-   - Include screenshots for UI changes
+4. 发起 Pull Request：
 
-6. **Address review feedback** if requested
+   - 说明变更背景、核心改动、验证结果
+   - 如涉及界面变化，可附截图或录屏
 
-## Development Tips
+## 架构速览
 
-### Using Ratatui
+- `src/openapi/`：Longport OpenAPI 集成与上下文管理
+- `src/data/`：数据模型与全局状态
+- `src/app.rs`：应用主循环（Bevy ECS + Tokio）
+- `src/system.rs`：页面渲染与交互逻辑
+- `src/widgets/`、`src/views/`：可复用 UI 组件
 
-This project uses [Ratatui](https://ratatui.rs/) for the TUI. For Ratatui-specific questions, refer to:
-- [Ratatui Documentation](https://ratatui.rs/)
-- [Ratatui Examples](https://github.com/ratatui-org/ratatui/tree/main/examples)
+核心流程：
 
-### Longport API
+```text
+初始化 -> 订阅行情 -> 接收推送 -> 更新缓存 -> 触发渲染
+```
 
-- **Rate Limit**: Maximum 10 API calls per second
-- **Token Expiration**: Access tokens expire every 3 months
-- **Documentation**: [Longport OpenAPI Docs](https://open.longbridge.com)
-- **Rust SDK**: [SDK Documentation](https://longportapp.github.io/openapi/rust/longport/)
+## 调试与排障
 
-### Debugging
+日志目录：
 
-Logs are written to:
-- macOS: `~/Library/Logs/longbridge-terminal/`
-- Linux: `~/.local/share/longbridge-terminal/logs/`
+- macOS：`~/Library/Logs/longbridge-terminal/`
+- Linux：`~/.local/share/longbridge-terminal/logs/`
 
-Enable debug logging:
+开启调试日志：
+
 ```bash
 RUST_LOG=debug cargo run
 ```
 
-## Questions or Issues?
+## 交流与反馈
 
-- **Bug Reports**: Open an issue with detailed reproduction steps
-- **Feature Requests**: Open an issue describing the feature and use case
-- **Questions**: Check existing issues or open a new discussion
+- 缺陷反馈：请提交可复现步骤、期望行为、实际行为
+- 功能建议：请描述业务场景与收益
+- 代码评审：聚焦问题本身，保持尊重、务实、可执行
 
-## Code of Conduct
-
-- Be respectful and inclusive
-- Provide constructive feedback
-- Focus on what is best for the community
-
-Thank you for contributing! 🎉
+感谢贡献！

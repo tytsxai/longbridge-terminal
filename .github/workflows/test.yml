@@ -1,4 +1,4 @@
-name: CI
+name: 持续集成
 on:
   pull_request:
   push:
@@ -9,12 +9,12 @@ on:
 
 jobs:
   build:
-    name: Test
+    name: 测试
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup | Cache Cargo
+      - name: 准备 | 缓存 Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -24,15 +24,15 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ubuntu-test-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Check Format
+      - name: 检查格式
         run: cargo fmt --all -- --check
-      - name: Check Install Script Syntax
+      - name: 检查安装脚本语法
         run: sh -n install
-      - name: Clippy
+      - name: 静态分析 Clippy
         run: cargo clippy -- -D warnings
-      - name: Test
+      - name: 测试
         run: cargo test
-      - name: Security Audit
+      - name: 安全审计
         run: |
           cargo install cargo-audit --locked --force
           ./scripts/cargo_audit.sh

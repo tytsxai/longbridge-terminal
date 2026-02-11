@@ -1,4 +1,4 @@
-name: Release
+name: 发布流程
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 jobs:
   # Build sources for every OS
   github_build:
-    name: Build release binaries
+    name: 构建发布二进制
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +51,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Setup | Checkout
+      - name: 准备 | 检出代码
         uses: actions/checkout@v4
 
       - uses: olegtarasov/get-tag@v2.1
@@ -60,7 +60,7 @@ jobs:
           tagRegex: "v(?<version>.*)"
 
       # Cache files between builds
-      - name: Setup | Cache Cargo
+      - name: 准备 | 缓存 Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -70,12 +70,12 @@ jobs:
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Musl Tool
+      - name: 安装 Musl 工具
         if: matrix.target == 'x86_64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-musl'
         run: |
           sudo apt-get install musl-tools
 
-      - name: Setup | Rust
+      - name: 准备 | Rust 工具链
         uses: actions-rs/toolchain@v1.0.7
         with:
           toolchain: stable
@@ -83,14 +83,14 @@ jobs:
           profile: minimal
           target: ${{ matrix.target }}
 
-      - name: Build | Build
+      - name: 构建 | 编译
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --manifest-path Cargo.toml --release --target ${{ matrix.target }} --config 'package.version="${{ steps.tagName.outputs.version }}"'
           use-cross: ${{ matrix.os == 'ubuntu-latest' }}
 
-      - name: Prepare artifacts [Windows]
+      - name: 整理产物 [Windows]
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
@@ -98,7 +98,7 @@ jobs:
           7z a ../../../${{ matrix.name }} longbridge.exe
           cd -
 
-      - name: Prepare artifacts [Linux & macOS]
+      - name: 整理产物 [Linux & macOS]
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
@@ -107,21 +107,21 @@ jobs:
           tar czvf ../../../${{ matrix.name }} longbridge
           cd -
 
-      - name: Test Bin [Linux & macOS]
+      - name: 验证二进制 [Linux & macOS]
         if: matrix.arch == 'x86_64' && matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
           ./longbridge --version
           cd -
 
-      - name: Test Bin [Windows]
+      - name: 验证二进制 [Windows]
         if: matrix.arch == 'x86_64' && matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
           ./longbridge.exe --version
           cd -
 
-      - name: Deploy | Upload artifacts
+      - name: 发布 | 上传产物
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
@@ -129,26 +129,26 @@ jobs:
 
   # Create GitHub release with Rust build targets and release notes
   github_release:
-    name: Create GitHub Release
+    name: 创建 GitHub 发布
     needs: github_build
     runs-on: ubuntu-latest
     steps:
-      - name: Setup | Checkout
+      - name: 准备 | 检出代码
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup | Artifacts
+      - name: 准备 | 下载产物
         uses: actions/download-artifact@v4
         with:
           path: release-dist
 
-      - name: Setup | Checksums
+      - name: 准备 | 生成校验和
         run: |
           ls -lha release-dist
           for file in release-dist/**/*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-      - name: Publish
+      - name: 发布版本
         uses: softprops/action-gh-release@v1
         with:
           files: release-dist/**/*

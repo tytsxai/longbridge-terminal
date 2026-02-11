@@ -1,57 +1,57 @@
-# Rate Limiting Implementation
+# 频率限制实现
 
-## Overview
+## 概述
 
-This document describes the rate limiting system implemented to comply with Longport API's "no more than 10 calls per second" limit.
+本文档描述了为遵守 Longport API "每秒不超过 10 次调用" 限制而实施的频率限制系统。
 
-## Architecture
+## 架构
 
-### Components
+### 组件
 
 1. **RateLimiter** (`src/openapi/rate_limiter.rs`)
-   - Token bucket algorithm implementation
-   - Configured for 10 requests/second with burst capacity of 20
-   - Automatic token refill based on elapsed time
-   - Built-in retry mechanism with exponential backoff
+   - 令牌桶算法实现
+   - 配置为 10 次请求/秒，突发容量为 20
+   - 基于经过的时间自动补充令牌
+   - 内置带有指数退避的重试机制
 
 2. **Rate-Limited Context Wrappers** (`src/openapi/wrapper.rs`)
-   - `RateLimitedQuoteContext`: Wraps `QuoteContext` with rate limiting
-   - `RateLimitedTradeContext`: Wraps `TradeContext` with rate limiting
-   - Provides access to inner context and rate limiter
+   - `RateLimitedQuoteContext`: 包装 `QuoteContext` 并增加频率限制
+   - `RateLimitedTradeContext`: 包装 `TradeContext` 并增加频率限制
+   - 提供对内部上下文和限流器的访问
 
 3. **Helper Functions** (`src/openapi/helpers.rs`)
-   - Convenience functions for common API operations
-   - Automatic rate limiting built-in
-   - Simplified API for common use cases
+   - 常用 API 操作的便捷函数
+   - 内置自动频率限制
+   - 为常见用例简化 API
 
-## Usage
+## 用法
 
-### Option 1: Using Helper Functions (Recommended for Common Operations)
+### 选项 1: 使用 Helper Functions (推荐用于常用操作)
 
 ```rust
 use crate::openapi::helpers;
 
-// Subscribe to quotes
+// 订阅行情
 helpers::subscribe_quotes(
     vec!["700.HK", "AAPL.US"],
     longport::quote::SubFlags::QUOTE
 ).await?;
 
-// Get quotes
+// 获取行情
 let quotes = helpers::get_quotes(vec!["700.HK"]).await?;
 
-// Get account balance
+// 获取账户余额
 let balance = helpers::get_account_balance(None).await?;
 ```
 
-### Option 2: Using Rate-Limited Context Directly
+### 选项 2: 直接使用带限流的 Context
 
 ```rust
 use crate::openapi::quote_limited;
 
 let ctx = quote_limited();
 
-// Execute rate-limited API call
+// 执行带限流的 API 调用
 ctx.execute("custom_operation", || {
     let inner = ctx.inner();
     Box::pin(async move {
@@ -60,51 +60,51 @@ ctx.execute("custom_operation", || {
 }).await?;
 ```
 
-### Option 3: Manual Rate Limiting
+### 选项 3: 手动限流
 
 ```rust
 use crate::openapi::global_rate_limiter;
 
 let limiter = global_rate_limiter();
 
-// Acquire token before API call
+// 在 API 调用前获取令牌
 limiter.acquire().await;
 
-// Make your API call
+// 进行 API 调用
 let result = ctx.some_api_method().await?;
 ```
 
-## Configuration
+## 配置
 
-The rate limiter is configured in `src/openapi/rate_limiter.rs`:
+限流器在 `src/openapi/rate_limiter.rs` 中配置:
 
 ```rust
 RateLimiter::new(
-    10,  // tokens_per_second: Maximum requests per second
-    20,  // max_tokens: Burst capacity
+    10,  // tokens_per_second: 每秒最大请求数
+    20,  // max_tokens: 突发容量
 )
 ```
 
-### Parameters
+### 参数
 
-- **tokens_per_second**: 10 (Longport API limit)
-- **max_tokens**: 20 (allows short bursts without throttling)
+- **tokens_per_second**: 10 (Longport API 限制)
+- **max_tokens**: 20 (允许短时间内的突发流量而不被节流)
 
-## Features
+## 特性
 
-### 1. Token Bucket Algorithm
+### 1. 令牌桶算法
 
-- Tokens are refilled at a constant rate (10/second)
-- Burst capacity allows temporary spikes in traffic
-- Smooth rate limiting without hard blocks
+- 令牌以恒定速率补充 (10/秒)
+- 突发容量允许流量的暂时峰值
+- 平滑的频率限制，无硬性阻塞
 
-### 2. Automatic Retry
+### 2. 自动重试
 
-- Detects rate limit errors (429, "rate limit", "too many requests")
-- Exponential backoff: 1s → 2s → 4s
-- Maximum 3 retries before giving up
+- 检测限流错误 (429, "rate limit", "too many requests")
+- 指数退避: 1s → 2s → 4s
+- 放弃前最多重试 3 次
 
-### 3. Monitoring
+### 3. 监控
 
 ```rust
 let limiter = global_rate_limiter();
@@ -112,29 +112,29 @@ let available = limiter.available_tokens();
 tracing::info!("Available rate limit tokens: {}", available);
 ```
 
-### 4. Thread-Safe
+### 4. 线程安全
 
-- Uses `tokio::sync::Semaphore` for token management
-- Compatible with Bevy ECS and async/tokio architecture
-- No locks or blocking operations
+- 使用 `tokio::sync::Semaphore` 进行令牌管理
+- 兼容 Bevy ECS 和 async/tokio 架构
+- 无锁或阻塞操作
 
-## Migration Guide
+## 迁移指南
 
-### Existing Code Without Rate Limiting
+### 没有限流的现有代码
 
 ```rust
-// Before
+// 之前
 let ctx = crate::openapi::quote();
 let quotes = ctx.quote(&symbols).await?;
 ```
 
-### Migrated Code With Rate Limiting
+### 迁移后带限流的代码
 
 ```rust
-// After (Option 1: Helper function)
+// 之后 (选项 1: Helper function)
 let quotes = crate::openapi::helpers::get_quotes(&symbols).await?;
 
-// After (Option 2: Rate-limited context)
+// 之后 (选项 2: Rate-limited context)
 let ctx = crate::openapi::quote_limited();
 ctx.execute("quote", || {
     let inner = ctx.inner();
@@ -145,70 +145,70 @@ ctx.execute("quote", || {
 }).await?;
 ```
 
-## Testing
+## 测试
 
-### Unit Tests
+### 单元测试
 
-Run rate limiter tests:
+运行限流器测试:
 
 ```bash
 cargo test --lib rate_limiter
 ```
 
-### Integration Testing
+### 集成测试
 
-Monitor rate limiting in action:
+监控限流器的实际运行:
 
-1. Enable debug logging:
+1. 启用调试日志:
    ```bash
    export RUST_LOG=debug
    ```
 
-2. Look for rate limiter logs:
+2. 查找限流器日志:
    ```
    Rate limiter: token acquired, available permits: 19
    Rate limiter: refilled 5 tokens, total available: 15
    ```
 
-### Performance Impact
+### 性能影响
 
-- Token acquisition: < 1µs (when tokens available)
-- Rate limit delay: Calculated dynamically based on token availability
-- Retry delay: Exponential backoff (1s, 2s, 4s)
+- 令牌获取: < 1µs (当有令牌可用时)
+- 限流延迟: 基于令牌可用性动态计算
+- 重试延迟: 指数退避 (1s, 2s, 4s)
 
-## Troubleshooting
+## 故障排除
 
-### Still Getting Rate Limit Errors
+### 仍然遇到限流错误
 
-1. Check if all API calls are using rate limiting
-2. Verify token configuration (should be 10/second)
-3. Check for concurrent API calls from multiple tasks
+1. 检查是否所有 API 调用都使用了限流
+2. 验证令牌配置 (应为 10/秒)
+3. 检查来自多个任务的并发 API 调用
 
-### Slow Performance
+### 性能缓慢
 
-1. Check burst capacity (should be 20 for normal operation)
-2. Reduce concurrent API call patterns
-3. Batch API requests where possible
+1. 检查突发容量 (正常运行应为 20)
+2. 减少并发 API 调用模式
+3. 尽可能批量处理 API 请求
 
-### Debug Logging
+### 调试日志
 
-Enable debug logging to see rate limiter activity:
+启用调试日志以查看限流器活动:
 
 ```bash
 export RUST_LOG=longbridge=debug
 cargo run
 ```
 
-## Future Improvements
+## 未来改进
 
-1. **Request Batching**: Automatically batch multiple API calls into single requests
-2. **Priority Queue**: Prioritize critical operations over background updates
-3. **Adaptive Rate Limiting**: Dynamically adjust rate based on API response headers
-4. **Metrics Dashboard**: Real-time monitoring of API usage and rate limit status
-5. **Per-Endpoint Limits**: Different rate limits for different API endpoints
+1. **请求批处理**: 自动将多个 API 调用批量处理为单个请求
+2. **优先级队列**: 优先处理关键操作而非后台更新
+3. **自适应限流**: 基于 API 响应头动态调整速率
+4. **指标仪表板**: API 使用情况和限流状态的实时监控
+5. **每端点限制**: 不同 API 端点的不同速率限制
 
-## References
+## 参考资料
 
-- Longport API Documentation: https://open.longbridge.com
-- Token Bucket Algorithm: https://en.wikipedia.org/wiki/Token_bucket
+- Longport API 文档: https://open.longbridge.com
+- 令牌桶算法: https://en.wikipedia.org/wiki/Token_bucket
 - Tokio Semaphore: https://docs.rs/tokio/latest/tokio/sync/struct.Semaphore.html
