@@ -16,7 +16,7 @@ pub fn align_right(text: &str, width: usize) -> String {
 pub fn unit(number: Decimal, precision: u32) -> String {
     match rust_i18n::locale().as_str() {
         "zh-CN" => unit_4(number, precision, (" 万", " 亿", " 万亿")),
-        "zh-HK" => unit_4(number, precision, (" 萬", " 億", " 萬億")),
+        "zh-HK" | "zh-TW" => unit_4(number, precision, (" 萬", " 億", " 萬億")),
         _ => unit_3(number, precision, ("K", "M", "B")),
     }
 }
@@ -46,6 +46,7 @@ fn unit_3(number: Decimal, precision: u32, units: (&str, &str, &str)) -> String 
     }
     format!("{}", number.round_dp(precision))
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +83,9 @@ mod tests {
         assert_eq!(unit(dec!(782323000), 2), "7.82 亿");
         assert_eq!(unit(dec!(2927823230000), 0), "3 万亿");
         assert_eq!(unit(dec!(2927823230000), 2), "2.93 万亿");
+
+        rust_i18n::set_locale("zh-HK");
+        assert_eq!(unit(dec!(23000), 1), "2.3 萬");
+        assert_eq!(unit(dec!(782323000), 2), "7.82 億");
     }
 }

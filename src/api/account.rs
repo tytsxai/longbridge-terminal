@@ -9,12 +9,10 @@ use std::collections::HashMap;
 
 /// Get account list
 pub async fn fetch_account_list() -> Result<AccountList> {
-    let ctx = openapi::trade();
-
     // longport SDK's account_balance returns current account balance info
     // For simplicity, we return a default account
     // Note: This call may fail (if Access Token lacks trading permission), but should not block app startup
-    match ctx.account_balance(None).await {
+    match openapi::helpers::get_account_balance(None).await {
         Ok(_balance) => {
             tracing::info!("Successfully fetched account balance");
         }
@@ -120,8 +118,7 @@ pub fn currencies(account_channel: &str) -> Result<Vec<CurrencyInfo>> {
 
 /// Fetch account balance from Longport SDK
 pub async fn fetch_account_balance() -> Result<AccountBalance> {
-    let ctx = openapi::trade();
-    let balances = ctx.account_balance(None).await?;
+    let balances = openapi::helpers::get_account_balance(None).await?;
 
     // Take the first account (user typically has one main account)
     let response = balances
@@ -159,8 +156,7 @@ pub async fn fetch_account_balance() -> Result<AccountBalance> {
 
 /// Fetch stock holdings from Longport SDK
 pub async fn fetch_stock_holdings() -> Result<Vec<Holding>> {
-    let ctx = openapi::trade();
-    let response = ctx.stock_positions(None).await?;
+    let response = openapi::helpers::get_stock_positions().await?;
 
     let mut holdings = Vec::new();
     let mut symbols = Vec::new();
@@ -193,8 +189,7 @@ pub async fn fetch_stock_holdings() -> Result<Vec<Holding>> {
 
     // Fetch real-time quotes for all holdings
     if !symbols.is_empty() {
-        let quote_ctx = openapi::quote();
-        if let Ok(quotes) = quote_ctx.quote(&symbols).await {
+        if let Ok(quotes) = openapi::helpers::get_quotes(&symbols).await {
             // Create a map for quick lookup
             let mut quote_map: std::collections::HashMap<String, rust_decimal::Decimal> =
                 std::collections::HashMap::new();

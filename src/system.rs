@@ -102,10 +102,8 @@ pub async fn fetch_watchlist(
         }
     }
 
-    let ctx = crate::openapi::quote();
-
-    // Get watchlist
-    match ctx.watchlist().await {
+    // Get watchlist (rate-limited)
+    match crate::openapi::helpers::get_watchlist().await {
         Ok(watchlist) => {
             // Extract group info and symbols
             let mut groups = Vec::new();
@@ -144,15 +142,13 @@ pub async fn fetch_watchlist(
             );
             Ok((counters, groups))
         }
-        Err(e) => Err(e.into()),
+        Err(e) => Err(e),
     }
 }
 
 pub async fn fetch_holdings() -> anyhow::Result<Vec<Counter>> {
-    let ctx = crate::openapi::trade();
-
-    // Get holdings list
-    match ctx.stock_positions(None).await {
+    // Get holdings list (rate-limited)
+    match crate::openapi::helpers::get_stock_positions().await {
         Ok(response) => {
             // StockPositionsResponse contains positions from multiple channels
             let mut counters = Vec::new();
@@ -189,10 +185,8 @@ pub struct PositionInfo {
 
 // Fetch Portfolio data
 pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decimal, Decimal)> {
-    let ctx = crate::openapi::trade();
-
     // Get account balance
-    let balance = match ctx.account_balance(None).await {
+    let balance = match crate::openapi::helpers::get_account_balance(None).await {
         Ok(balances) => balances
             .iter()
             .fold(Decimal::ZERO, |acc, b| acc + b.total_cash),
@@ -203,12 +197,12 @@ pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decima
     };
 
     // Get positions
-    let mut positions = match ctx.stock_positions(None).await {
+    let mut positions = match crate::openapi::helpers::get_stock_positions().await {
         Ok(response) => {
             let mut positions = Vec::new();
             for channel in &response.channels {
                 for position in &channel.positions {
-                    let counter: Counter = position.symbol.parse().unwrap();
+                    let counter = Counter::new(&position.symbol);
                     positions.push(PositionInfo {
                         symbol: counter,
                         symbol_name: position.symbol_name.clone(),
@@ -232,10 +226,9 @@ pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decima
 
     // Get real-time quotes to calculate market value and P/L
     if !positions.is_empty() {
-        let quote_ctx = crate::openapi::quote();
         let symbols: Vec<String> = positions.iter().map(|p| p.symbol.to_string()).collect();
 
-        if let Ok(quotes) = quote_ctx.quote(&symbols).await {
+        if let Ok(quotes) = crate::openapi::helpers::get_quotes(&symbols).await {
             for (pos, quote) in positions.iter_mut().zip(quotes.iter()) {
                 // Update current price
                 pos.current_price = quote.last_done;
@@ -301,41 +294,41 @@ impl WsManager {
         _sub_type: SubTypes,
     ) -> anyhow::Result<()> {
         // TODO: Use longport SDK to resubscribe
-        let ctx = crate::openapi::quote();
         let symbol_strings: Vec<String> = symbols
             .iter()
             .map(std::string::ToString::to_string)
             .collect();
-        let _ = ctx
-            .subscribe(&symbol_strings, longport::quote::SubFlags::QUOTE)
-            .await;
+        let _ = crate::openapi::helpers::subscribe_quotes(
+            &symbol_strings,
+            longport::quote::SubFlags::QUOTE,
+        )
+        .await;
         Ok(())
     }
 
     pub async fn quote_detail(&self, _name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
-        let ctx = crate::openapi::quote();
         let symbol_strings: Vec<String> = symbols
             .iter()
             .map(std::string::ToString::to_string)
             .collect();
-        let _ = ctx
-            .subscribe(
-                &symbol_strings,
-                longport::quote::SubFlags::QUOTE | longport::quote::SubFlags::DEPTH,
-            )
-            .await;
+        let _ = crate::openapi::helpers::subscribe_quotes(
+            &symbol_strings,
+            longport::quote::SubFlags::QUOTE | longport::quote::SubFlags::DEPTH,
+        )
+        .await;
         Ok(())
     }
 
     pub async fn quote_trade(&self, _name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
-        let ctx = crate::openapi::quote();
         let symbol_strings: Vec<String> = symbols
             .iter()
             .map(std::string::ToString::to_string)
             .collect();
-        let _ = ctx
-            .subscribe(&symbol_strings, longport::quote::SubFlags::TRADE)
-            .await;
+        let _ = crate::openapi::helpers::subscribe_quotes(
+            &symbol_strings,
+            longport::quote::SubFlags::TRADE,
+        )
+        .await;
         Ok(())
     }
 }
@@ -515,11 +508,10 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
 
         // Get initial quote data
         if !counters.is_empty() {
-            let ctx = crate::openapi::quote();
             let symbols: Vec<String> = counters.iter().map(|c| c.as_str().to_string()).collect();
 
             // Use quote() to get full quote data (including prev_close and trade_status)
-            match ctx.quote(&symbols).await {
+            match crate::openapi::helpers::get_quotes(&symbols).await {
                 Ok(quotes) => {
                     for quote in quotes {
                         // Debug: log trade_status from API
@@ -543,10 +535,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
             }
 
             // Get stock static info (including name, etc.)
-            match ctx
-                .static_info(symbols.iter().map(std::string::String::as_str))
-                .await
-            {
+            match crate::openapi::helpers::get_static_info(&symbols).await {
                 Ok(infos) => {
                     for info in infos {
                         #[allow(irrefutable_let_patterns)]
@@ -598,8 +587,7 @@ pub fn refresh_stock(counter: Counter) {
             .await;
 
         // Get full quote data (including prev_close and trade_status)
-        let ctx = crate::openapi::quote();
-        if let Ok(quotes) = ctx.quote(&[counter.to_string()]).await {
+        if let Ok(quotes) = crate::openapi::helpers::get_quotes([counter.to_string()]).await {
             if let Some(quote) = quotes.first() {
                 STOCKS.modify(counter.clone(), |stock| {
                     // Use update_from_security_quote to update all fields including trade_status
@@ -669,8 +657,7 @@ pub fn refresh_stock_debounced(counter: Counter) {
                 .await;
 
             // Get full quote data (including prev_close and trade_status)
-            let ctx = crate::openapi::quote();
-            if let Ok(quotes) = ctx.quote(&[counter.to_string()]).await {
+            if let Ok(quotes) = crate::openapi::helpers::get_quotes([counter.to_string()]).await {
                 if let Some(quote) = quotes.first() {
                     STOCKS.modify(counter.clone(), |stock| {
                         stock.update_from_security_quote(quote);
@@ -2039,7 +2026,7 @@ fn watch_group_table(
             let mut cells = Vec::with_capacity(if full_mode { 6 } else { 4 });
             cells.push(Cell::from(Line::from(vec![
                 Span::styled(
-                    counter.market().to_string(),
+                    counter.region().to_string(),
                     styles::market(counter.region()),
                 ),
                 Span::raw(" "),
@@ -2357,7 +2344,7 @@ pub fn render_portfolio(
                         Row::new(vec![
                             Cell::from(Line::from(vec![
                                 Span::styled(
-                                    counter.market().to_string(),
+                                    counter.region().to_string(),
                                     styles::market(counter.region()),
                                 ),
                                 Span::raw(" "),

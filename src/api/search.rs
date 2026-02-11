@@ -47,20 +47,25 @@ pub struct StockQuery {
 
 /// Search stocks
 pub async fn fetch_stock(query: &StockQuery) -> Result<StockResult> {
-    let ctx = openapi::quote();
-
-    // Use longport SDK search functionality
-    let symbols = ctx.static_info([&query.keyword]).await?;
+    // Use rate-limited wrapper to avoid API burst and 429 errors
+    let symbols = openapi::helpers::get_static_info([query.keyword.as_str()]).await?;
+    let locale = rust_i18n::locale();
 
     let product_list = symbols
         .iter()
         .map(|info| {
-            // Parse market and code from symbol
-            let parts: Vec<&str> = info.symbol.split('.').collect();
-            let (market, code) = if parts.len() == 2 {
-                (parts[0].to_string(), parts[1].to_string())
+            // Parse market and code from symbol (e.g. AAPL.US, .DJI.US)
+            let (code, market) = info
+                .symbol
+                .rsplit_once('.')
+                .map_or((info.symbol.clone(), String::new()), |(code, market)| {
+                    (code.to_string(), market.to_string())
+                });
+
+            let display_name = if locale.starts_with("zh") {
+                info.name_cn.clone()
             } else {
-                (String::new(), info.symbol.clone())
+                info.name_en.clone()
             };
 
             StockItem {
@@ -68,7 +73,7 @@ pub async fn fetch_stock(query: &StockQuery) -> Result<StockResult> {
                 counter_id: Counter::new(&info.symbol),
                 currency: String::new(), // longport's static_info may not provide currency
                 market,
-                name: info.name_cn.clone(),
+                name: display_name,
                 product: String::new(),
                 score: 1.0,
                 product_type: String::new(),
