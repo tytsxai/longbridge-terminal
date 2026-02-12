@@ -1,10 +1,10 @@
 # 长桥终端
 
-基于 [长桥 OpenAPI](https://open.longbridge.com) 构建的 **实验性终端股票应用（TUI）**。
+基于 [长桥 OpenAPI](https://open.longbridge.com) 构建的 **实验性终端股票应用（终端界面，TUI）**。
 
-它不是“炫技 Demo”，而是一个面向中文开发者与交易研究者的参考实现：
+它不是“炫技演示（Demo）”，而是一个面向中文开发者与交易研究者的参考实现：
 - 一边在终端里看行情与持仓；
-- 一边学习如何用 Rust + Longport SDK 组织实时数据、状态与 UI。
+- 一边学习如何用 Rust + Longport 软件开发工具包（SDK）组织实时数据、状态与界面（UI）。
 
 [![asciicast](https://asciinema.org/a/785102.svg)](https://asciinema.org/a/785102)
 
@@ -15,8 +15,8 @@
 ### 这个项目适合你，如果你希望：
 
 - 在命令行里快速查看自选行情、资产、K 线
-- 用一个可运行项目学习 Longport OpenAPI SDK
-- 参考 Rust TUI（Ratatui）在实时场景下的工程组织方式
+- 用一个可运行项目学习 Longport OpenAPI 软件开发工具包（SDK）
+- 参考 Rust 终端界面（Ratatui）在实时场景下的工程组织方式
 
 ### 这个项目不适合你，如果你需要：
 
@@ -131,12 +131,12 @@ changqiao
 
 - [项目定位与适用场景（中文）](docs/project_positioning_zh-CN.md)
 - [5 分钟快速上手（中文）](docs/quickstart_zh-CN.md)
-- [常见问题 FAQ（中文）](docs/faq_zh-CN.md)
+- [常见问题（FAQ，中文）](docs/faq_zh-CN.md)
 
 ### 维护与运维
 
 - [生产就绪清单（中文）](docs/production_readiness_zh-CN.md)
-- [发布日 Runbook（中文）](docs/release_runbook_zh-CN.md)
+- [发布日操作手册（Runbook，中文）](docs/release_runbook_zh-CN.md)
 - [值班速查（中文）](docs/oncall_cheatsheet_zh-CN.md)
 - [事故复盘模板（中文）](docs/postmortem_template_zh-CN.md)
 - [运行治理与责任模板（中文）](docs/ops_governance_zh-CN.md)
@@ -151,6 +151,10 @@ changqiao
 
 - [长桥 OpenAPI 文档](https://open.longbridge.com)
 - [Rust SDK 文档](https://longportapp.github.io/openapi/rust/longport/)
+
+第三方依赖说明：
+
+- `crates/cli-candlestick-chart/README.md` 为上游项目文档，默认保持英文原文，避免偏离上游更新。
 
 ---
 

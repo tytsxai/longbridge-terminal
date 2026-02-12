@@ -188,6 +188,10 @@ TradeSession.Intraday: Trading
 TradeSession.Pre: Pre
 TradeSession.Post: Post
 TradeSession.Overnight: Night
+KlineType.Day: Day
+KlineType.Week: Week
+KlineType.Month: Month
+KlineType.Year: Year
 Help: " Help "
 HelpTips: |-
   - General ----------------------------------------------------------------------------------

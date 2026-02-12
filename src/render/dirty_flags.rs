@@ -188,7 +188,7 @@ impl RenderState {
     /// Get statistics for logging/debugging
     pub fn stats(&self) -> String {
         format!(
-            "renders: {}, skips: {}, efficiency: {:.1}%",
+            "渲染次数: {}, 跳过次数: {}, 跳过率: {:.1}%",
             self.render_count,
             self.skip_count,
             self.efficiency()

@@ -48,7 +48,7 @@ impl RateLimiter {
                     // Consume the token permanently; tokens are restored by refill_tokens()
                     permit.forget();
                     debug!(
-                        "Rate limiter: token acquired, available permits: {}",
+                        "限流器：已获取令牌，剩余令牌={}",
                         self.semaphore.available_permits()
                     );
                     return;
@@ -57,7 +57,7 @@ impl RateLimiter {
                     sleep(wait_duration).await;
                 }
                 Err(tokio::sync::TryAcquireError::Closed) => {
-                    warn!("Rate limiter semaphore closed unexpectedly");
+                    warn!("限流器信号量意外关闭");
                     sleep(wait_duration).await;
                 }
             }
@@ -84,7 +84,7 @@ impl RateLimiter {
                 self.semaphore.add_permits(tokens_to_add as usize);
                 *last_refill = now;
                 debug!(
-                    "Rate limiter: refilled {} tokens, total available: {}",
+                    "限流器：补充令牌 {} 个，当前可用={}",
                     tokens_to_add,
                     self.semaphore.available_permits()
                 );
@@ -113,14 +113,14 @@ impl RateLimiter {
             // Acquire token before making request
             self.acquire().await;
 
-            debug!("Executing rate-limited request: {}", request_name);
+            debug!("执行限流请求：{}", request_name);
 
             // Execute the request
             match f().await {
                 Ok(result) => {
                     if retry_count > 0 {
                         debug!(
-                            "Request succeeded after {} retries: {}",
+                            "请求重试后成功：重试 {} 次，请求={}",
                             retry_count, request_name
                         );
                     }
@@ -136,7 +136,7 @@ impl RateLimiter {
                     if is_rate_limit_error && retry_count < MAX_RETRIES {
                         retry_count += 1;
                         warn!(
-                            "Rate limit error for request '{}' (attempt {}/{}), retrying after {:?}",
+                            "请求 '{}' 命中限流（第 {}/{} 次），将在 {:?} 后重试",
                             request_name, retry_count, MAX_RETRIES, backoff_duration
                         );
 
@@ -149,7 +149,7 @@ impl RateLimiter {
                     // Non-rate-limit error or max retries reached
                     if retry_count > 0 {
                         warn!(
-                            "Request failed after {} retries: {}",
+                            "请求重试后仍失败：重试 {} 次，请求={}",
                             retry_count, request_name
                         );
                     }
@@ -193,7 +193,7 @@ mod tests {
 
         assert!(
             elapsed < Duration::from_millis(100),
-            "First acquire should be immediate"
+            "首次获取令牌应立即成功"
         );
     }
 
@@ -212,10 +212,7 @@ mod tests {
         let elapsed = start.elapsed();
 
         // Should wait at least 100ms (1 token at 10/sec = 0.1s)
-        assert!(
-            elapsed >= Duration::from_millis(90),
-            "Should wait for token refill"
-        );
+        assert!(elapsed >= Duration::from_millis(90), "令牌耗尽后应等待补充");
     }
 
     #[tokio::test]
@@ -237,6 +234,6 @@ mod tests {
             .await;
 
         assert_eq!(result, Ok(42));
-        assert_eq!(attempt, 2, "Should retry once");
+        assert_eq!(attempt, 2, "应当重试 1 次");
     }
 }

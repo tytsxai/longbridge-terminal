@@ -187,10 +187,10 @@ impl std::fmt::Display for KlineType {
             Self::PerFifteenMinutes => write!(f, "15m"),
             Self::PerThirtyMinutes => write!(f, "30m"),
             Self::PerHour => write!(f, "1h"),
-            Self::PerDay => write!(f, "Day"),
-            Self::PerWeek => write!(f, "Week"),
-            Self::PerMonth => write!(f, "Month"),
-            Self::PerYear => write!(f, "Year"),
+            Self::PerDay => write!(f, "{}", t!("KlineType.Day")),
+            Self::PerWeek => write!(f, "{}", t!("KlineType.Week")),
+            Self::PerMonth => write!(f, "{}", t!("KlineType.Month")),
+            Self::PerYear => write!(f, "{}", t!("KlineType.Year")),
         }
     }
 }
@@ -602,7 +602,7 @@ impl Default for TradeData {
 
 #[cfg(test)]
 mod tests {
-    use super::Counter;
+    use super::{Counter, KlineType};
 
     #[test]
     fn parses_standard_symbol() {
@@ -623,5 +623,27 @@ mod tests {
         let counter = Counter::new("BTCUSD");
         assert_eq!(counter.code(), "BTCUSD");
         assert_eq!(counter.market(), "");
+    }
+
+    #[test]
+    fn kline_type_display_is_localized() {
+        let _lock = crate::helper::TEST_LOCALE_LOCK.lock().expect("poison");
+        rust_i18n::set_locale("en");
+        assert_eq!(KlineType::PerDay.to_string(), "Day");
+        assert_eq!(KlineType::PerWeek.to_string(), "Week");
+        assert_eq!(KlineType::PerMonth.to_string(), "Month");
+        assert_eq!(KlineType::PerYear.to_string(), "Year");
+
+        rust_i18n::set_locale("zh-CN");
+        assert_eq!(KlineType::PerDay.to_string(), "日");
+        assert_eq!(KlineType::PerWeek.to_string(), "周");
+        assert_eq!(KlineType::PerMonth.to_string(), "月");
+        assert_eq!(KlineType::PerYear.to_string(), "年");
+
+        rust_i18n::set_locale("zh-HK");
+        assert_eq!(KlineType::PerDay.to_string(), "日");
+        assert_eq!(KlineType::PerWeek.to_string(), "週");
+        assert_eq!(KlineType::PerMonth.to_string(), "月");
+        assert_eq!(KlineType::PerYear.to_string(), "年");
     }
 }

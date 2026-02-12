@@ -121,7 +121,7 @@ pub async fn fetch_account_balance() -> Result<AccountBalance> {
     let response = balances
         .into_iter()
         .next()
-        .ok_or_else(|| anyhow::anyhow!("No account balance found"))?;
+        .ok_or_else(|| anyhow::anyhow!("未获取到账户余额数据"))?;
 
     // Map longport response to our AccountBalance structure
     let mut cash_infos = Vec::new();

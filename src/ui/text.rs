@@ -62,6 +62,7 @@ mod tests {
 
     #[test]
     fn test_unit() {
+        let _lock = crate::helper::TEST_LOCALE_LOCK.lock().expect("poison");
         rust_i18n::set_locale("en");
         assert_eq!(unit(dec!(1), 2), "1");
         assert_eq!(unit(dec!(1), 0), "1");

@@ -66,21 +66,21 @@ pub async fn init_contexts(
     // Store in global variables
     QUOTE_CTX
         .set(quote_ctx)
-        .map_err(|_| anyhow::anyhow!("QuoteContext already initialized"))?;
+        .map_err(|_| anyhow::anyhow!("QuoteContext 已初始化，请勿重复初始化"))?;
     TRADE_CTX
         .set(trade_ctx)
-        .map_err(|_| anyhow::anyhow!("TradeContext already initialized"))?;
+        .map_err(|_| anyhow::anyhow!("TradeContext 已初始化，请勿重复初始化"))?;
 
     // Initialize rate-limited wrappers
-    let quote_ref = QUOTE_CTX.get().expect("QuoteContext just initialized");
-    let trade_ref = TRADE_CTX.get().expect("TradeContext just initialized");
+    let quote_ref = QUOTE_CTX.get().expect("QuoteContext 已初始化");
+    let trade_ref = TRADE_CTX.get().expect("TradeContext 已初始化");
 
     RATE_LIMITED_QUOTE_CTX
         .set(RateLimitedQuoteContext::new(quote_ref))
-        .map_err(|_| anyhow::anyhow!("RateLimitedQuoteContext already initialized"))?;
+        .map_err(|_| anyhow::anyhow!("RateLimitedQuoteContext 已初始化，请勿重复初始化"))?;
     RATE_LIMITED_TRADE_CTX
         .set(RateLimitedTradeContext::new(trade_ref))
-        .map_err(|_| anyhow::anyhow!("RateLimitedTradeContext already initialized"))?;
+        .map_err(|_| anyhow::anyhow!("RateLimitedTradeContext 已初始化，请勿重复初始化"))?;
 
     tracing::info!("限流器已初始化：每秒 10 次请求，突发容量 20");
 
@@ -94,28 +94,28 @@ pub async fn init_contexts(
 pub fn quote() -> &'static longport::quote::QuoteContext {
     QUOTE_CTX
         .get()
-        .expect("QuoteContext not initialized, please call init_contexts() first")
+        .expect("QuoteContext 未初始化，请先调用 init_contexts()")
 }
 
 /// Get global `TradeContext`
 pub fn trade() -> &'static longport::trade::TradeContext {
     TRADE_CTX
         .get()
-        .expect("TradeContext not initialized, please call init_contexts() first")
+        .expect("TradeContext 未初始化，请先调用 init_contexts()")
 }
 
 /// Get rate-limited `QuoteContext` (recommended for all API calls)
 pub fn quote_limited() -> &'static RateLimitedQuoteContext {
     RATE_LIMITED_QUOTE_CTX
         .get()
-        .expect("RateLimitedQuoteContext not initialized, please call init_contexts() first")
+        .expect("RateLimitedQuoteContext 未初始化，请先调用 init_contexts()")
 }
 
 /// Get rate-limited `TradeContext` (recommended for all API calls)
 pub fn trade_limited() -> &'static RateLimitedTradeContext {
     RATE_LIMITED_TRADE_CTX
         .get()
-        .expect("RateLimitedTradeContext not initialized, please call init_contexts() first")
+        .expect("RateLimitedTradeContext 未初始化，请先调用 init_contexts()")
 }
 
 /// Display config guide (when config loading fails)

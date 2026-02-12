@@ -31,10 +31,16 @@ jobs:
           sh -n install
           sh -n scripts/release_preflight.sh
           sh -n scripts/log_alert_guard.sh
+      - name: 安装中文化检查依赖
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+      - name: 中文化守门检查
+        run: python3 scripts/check_i18n_guard.py
       - name: 静态分析 Clippy
         run: cargo clippy -- -D warnings
       - name: 测试
-        run: cargo test
+        run: cargo test -- --test-threads=1
       - name: 安全审计
         run: |
           cargo install cargo-audit --locked --force

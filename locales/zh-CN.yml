@@ -12,14 +12,14 @@ exit:
   multi_instance: "检测到其他运行实例，请先关闭后再运行"
 qrcode_view:
   scan_hint: |
-    请使用长桥 iOS 或 Android app 扫描二维码
+    请使用长桥 iOS 或 Android 应用扫描二维码
     https://longbridge.hk/download
   error:
     heading: "生成二维码失败"
-    content: "请退出 app 后重试"
+    content: "请退出应用后重试"
   timeout:
     heading: "二维码已失效"
-    content: "请退出 app 后重试"
+    content: "请退出应用后重试"
 user:
   open_account:
     heading: "请开户"
@@ -39,7 +39,7 @@ StockIndex:
   000001.SH: "上证指数"
   399001.SZ: "深证成指"
   399006.SZ: "创业板指"
-Please sign in: "请登陆"
+Please sign in: "请登录"
 Scan the QR code to finish signing in: "扫描二维码以完成登录"
 Signing in...: "登录中..."
 "Please wait...": "请稍后..."
@@ -56,13 +56,13 @@ WebSocket Disconnected: "实时更新中断"
 Keyboard.Help: "帮助 [?]"
 Keyboard.Search: "搜索 [/]"
 Keyboard.Quit: "退出 [^c]"
-Keyboard.OpenDetail: "选择 [o]"
+Keyboard.OpenDetail: "选择 [⏎]"
 Keyboard.QRCode.Enter: "登录 [⏎]"
-Keyboard.SwitchChart: "切换图标 [⇥]"
+Keyboard.SwitchChart: "切换图表 [⇥]"
 Keyboard.Scroll: 滚动 [↑↓]
 Keyboard.Console: 日志 [`]
 "Welcome, %{name}": "欢迎，%{name}"
-stock counter id must be valid: "CounterID 不正确"
+stock counter id must be valid: "股票代码无效"
 Loading.General: "加载中..."
 Portfolio.Loading: "正在加载资产数据..."
 Portfolio.HoldingsCount: "持仓"
@@ -144,7 +144,6 @@ StockDepth:
 StockQuoteTrades: "交易明细"
 CashBalance:
   title: " 现金 "
-  total: 现金总额
   Total: 总额
   Avail. Balance: 可用现金
   Cash Locked: 冻结现金
@@ -189,6 +188,10 @@ TradeSession.Intraday: 交易中
 TradeSession.Pre: 盘前
 TradeSession.Post: 盘后
 TradeSession.Overnight: 夜盘
+KlineType.Day: 日
+KlineType.Week: 周
+KlineType.Month: 月
+KlineType.Year: 年
 Help: " 帮助 "
 HelpTips: |-
   - 通用 ---------------------------------------------------------------------------------
@@ -214,7 +217,7 @@ HelpTips: |-
 
   - 资产总览 -----------------------------------------------------------------------------
 
-    a                               多账户之前切换（如有）
+    a                               多账户之间切换（如有）
     c                               切换展示币种
     j, Up Arrow, k, Down Arrow      上下切换持仓列表或其他列表的选中项
 

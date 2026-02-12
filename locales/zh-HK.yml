@@ -12,14 +12,14 @@ exit:
   multi_instance: "檢測到其他運行實例，請先關閉後再運行"
 qrcode_view:
   scan_hint: |
-    請使用長橋 iOS 或 Android app 掃描二維碼
+    請使用長橋 iOS 或 Android 應用掃描二維碼
     https://longbridge.hk/download
   error:
     heading: "生成二維碼失敗"
-    content: "請退出 app 後重試"
+    content: "請退出應用後重試"
   timeout:
     heading: "二維碼已失效"
-    content: "請退出 app 後重試"
+    content: "請退出應用後重試"
 user:
   open_account:
     heading: "請開户"
@@ -39,7 +39,7 @@ StockIndex:
   000001.SH: "上證指數"
   399001.SZ: "深證成指"
   399006.SZ: "創業板指"
-Please sign in: "請登陸"
+Please sign in: "請登錄"
 Scan the QR code to finish signing in: "掃描二維碼以完成登錄"
 Signing in...: "登錄中..."
 "Please wait...": "請稍後..."
@@ -56,13 +56,13 @@ WebSocket Disconnected: "實時更新中斷"
 Keyboard.Help: "幫助 [?]"
 Keyboard.Search: "搜索 [/]"
 Keyboard.Quit: "退出 [^c]"
-Keyboard.OpenDetail: "選擇 [o]"
+Keyboard.OpenDetail: "選擇 [⏎]"
 Keyboard.QRCode.Enter: "登錄 [⏎]"
-Keyboard.SwitchChart: "切換圖標 [⇥]"
+Keyboard.SwitchChart: "切換圖表 [⇥]"
 Keyboard.Scroll: 滾動 [↑↓]
 Keyboard.Console: 日誌 [`]
 "Welcome, %{name}": "歡迎，%{name}"
-stock counter id must be valid: "CounterID 不正確"
+stock counter id must be valid: "股票代號無效"
 Loading.General: "載入中..."
 Portfolio.Loading: "正在載入資產數據..."
 Portfolio.HoldingsCount: "持倉"
@@ -144,7 +144,6 @@ StockDepth:
 StockQuoteTrades: "交易明細"
 CashBalance:
   title: " 現金 "
-  total: 現金總額
   Total: 總額
   Avail. Balance: 可用現金
   Cash Locked: 凍結現金
@@ -189,6 +188,10 @@ TradeSession.Intraday: 交易中
 TradeSession.Pre: 盤前
 TradeSession.Post: 盤後
 TradeSession.Overnight: 夜盤
+KlineType.Day: 日
+KlineType.Week: 週
+KlineType.Month: 月
+KlineType.Year: 年
 Help: " 幫助 "
 HelpTips: |-
   - 通用 ---------------------------------------------------------------------------------
@@ -214,7 +217,7 @@ HelpTips: |-
 
   - 資產總覽 -----------------------------------------------------------------------------
 
-    a                               多賬户之前切換（如有）
+    a                               多賬户之間切換（如有）
     c                               切換展示幣種
     j, Up Arrow, k, Down Arrow      上下切換持倉列表或其他列表的選中項
 
