@@ -2,7 +2,7 @@
 set -eu
 type curl > /dev/null || { echo "未找到 curl，请先安装 curl。"; exit 1; }
 
-repo='longbridge/longbridge-terminal'
+repo="${CHANGQIAO_REPO:-longbridge/longbridge-terminal}"
 
 get_latest_release() {
   curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
@@ -10,12 +10,14 @@ get_latest_release() {
     sed -E 's/.*"([^"]+)".*/\1/'                                       # Pluck JSON value
 }
 
-bin_name='longbridge'
-package_name='longbridge-terminal'
+bin_name='changqiao'
+package_name='changqiao-terminal'
+legacy_bin_name='longbridge'
+legacy_package_name='longbridge-terminal'
 default_version='v0.7.0-preview0'
 
 latest_version="$(get_latest_release || true)"
-version="${LONGBRIDGE_VERSION:-$latest_version}"
+version="${CHANGQIAO_VERSION:-${LONGBRIDGE_VERSION:-$latest_version}}"
 if [ -z "$version" ]; then
   version="$default_version"
 fi
@@ -42,7 +44,7 @@ sha256_of() {
   exit 1
 }
 
-tmp_dir="$(mktemp -d -t longbridge-install.XXXXXX)"
+tmp_dir="$(mktemp -d -t changqiao-install.XXXXXX)"
 cleanup() {
   rm -rf "$tmp_dir"
 }
@@ -64,8 +66,6 @@ case "$arch" in
     ;;
 esac
 
-echo "正在下载 $package_name@$version ..."
-
 # Detect musl libc on Linux
 libc=''
 if [ "$platform" = "linux" ]; then
@@ -74,12 +74,39 @@ if [ "$platform" = "linux" ]; then
   fi
 fi
 
-download_url=https://github.com/$repo/releases/download/$version/$package_name-$platform$libc-$arch.tar.gz
-checksum_url="$download_url.sha256"
-echo "下载地址: $download_url"
+selected_package_name=''
+selected_source_bin=''
+selected_download_url=''
 
-curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz" "$download_url"
-curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz.sha256" "$checksum_url"
+try_download() {
+  pkg="$1"
+  source_bin="$2"
+  url="https://github.com/$repo/releases/download/$version/$pkg-$platform$libc-$arch.tar.gz"
+  checksum="$url.sha256"
+
+  if curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz" "$url" \
+    && curl --fail --location --show-error -o "$tmp_dir/$bin_name.tar.gz.sha256" "$checksum"; then
+    selected_package_name="$pkg"
+    selected_source_bin="$source_bin"
+    selected_download_url="$url"
+    return 0
+  fi
+
+  return 1
+}
+
+echo "正在下载 $package_name@$version ..."
+
+if ! try_download "$package_name" "$bin_name"; then
+  echo "未找到新产物 $package_name，尝试兼容旧产物 $legacy_package_name ..."
+  if ! try_download "$legacy_package_name" "$legacy_bin_name"; then
+    echo "下载失败：未找到可用的发布产物。" >&2
+    echo "请检查版本号（CHANGQIAO_VERSION / LONGBRIDGE_VERSION）和仓库（CHANGQIAO_REPO）。" >&2
+    exit 1
+  fi
+fi
+
+echo "下载地址: $selected_download_url"
 
 expected_checksum="$(awk 'NF{print $1; exit}' "$tmp_dir/$bin_name.tar.gz.sha256" | tr -d '\r\n')"
 actual_checksum="$(sha256_of "$tmp_dir/$bin_name.tar.gz")"
@@ -100,18 +127,23 @@ echo "sha256 校验通过。"
 
 tar zxf "$tmp_dir/$bin_name.tar.gz" -C "$tmp_dir"
 
-if [ ! -f "$tmp_dir/$bin_name" ]; then
-  echo "安装失败：压缩包中未找到可执行文件 $bin_name。" >&2
+source_path="$tmp_dir/$selected_source_bin"
+if [ ! -f "$source_path" ]; then
+  echo "安装失败：压缩包中未找到可执行文件 $selected_source_bin。" >&2
   exit 1
 fi
 
 if test $(id -u) -eq 0; then
-  install -m 0755 "$tmp_dir/$bin_name" "/usr/local/bin/$bin_name"
+  install -m 0755 "$source_path" "/usr/local/bin/$bin_name"
 else
-  sudo install -m 0755 "$tmp_dir/$bin_name" "/usr/local/bin/$bin_name"
+  sudo install -m 0755 "$source_path" "/usr/local/bin/$bin_name"
 fi
 
-echo "Longbridge Terminal $version 安装成功。"
+if [ "$selected_package_name" = "$legacy_package_name" ]; then
+  echo "已兼容旧版发布产物（$legacy_package_name），并安装为命令：$bin_name。"
+fi
+
+echo "长桥终端 $version 安装成功。"
 echo ""
-echo "你可以使用 \`longbridge --help\` 查看帮助。"
+echo "你可以使用 \`$bin_name --help\` 查看帮助。"
 echo ""

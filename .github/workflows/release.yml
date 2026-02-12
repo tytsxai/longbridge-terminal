@@ -16,37 +16,37 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            name: longbridge-terminal-linux-amd64.tar.gz
+            name: changqiao-terminal-linux-amd64.tar.gz
             arch: x86_64
 
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            name: longbridge-terminal-linux-arm64.tar.gz
+            name: changqiao-terminal-linux-arm64.tar.gz
             arch: aarch64
 
           - target: x86_64-apple-darwin
             os: macOS-latest
-            name: longbridge-terminal-darwin-amd64.tar.gz
+            name: changqiao-terminal-darwin-amd64.tar.gz
             arch: x86_64
 
           - target: aarch64-apple-darwin
             os: macOS-latest
-            name: longbridge-terminal-darwin-arm64.tar.gz
+            name: changqiao-terminal-darwin-arm64.tar.gz
             arch: aarch64
 
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            name: longbridge-terminal-windows-amd64.zip
+            name: changqiao-terminal-windows-amd64.zip
             arch: x86_64
 
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            name: longbridge-terminal-linux-musl-amd64.tar.gz
+            name: changqiao-terminal-linux-musl-amd64.tar.gz
             arch: x86_64
 
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
-            name: longbridge-terminal-linux-musl-arm64.tar.gz
+            name: changqiao-terminal-linux-musl-arm64.tar.gz
             arch: aarch64
 
     runs-on: ${{ matrix.os }}
@@ -94,8 +94,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          strip longbridge.exe
-          7z a ../../../${{ matrix.name }} longbridge.exe
+          strip changqiao.exe
+          7z a ../../../${{ matrix.name }} changqiao.exe
           cd -
 
       - name: 整理产物 [Linux & macOS]
@@ -103,22 +103,22 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           # TODO: investigate better cross platform stripping
-          strip longbridge || true
-          tar czvf ../../../${{ matrix.name }} longbridge
+          strip changqiao || true
+          tar czvf ../../../${{ matrix.name }} changqiao
           cd -
 
       - name: 验证二进制 [Linux & macOS]
         if: matrix.arch == 'x86_64' && matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          ./longbridge --version
+          ./changqiao --version
           cd -
 
       - name: 验证二进制 [Windows]
         if: matrix.arch == 'x86_64' && matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          ./longbridge.exe --version
+          ./changqiao.exe --version
           cd -
 
       - name: 发布 | 上传产物
