@@ -298,7 +298,7 @@ pub async fn run(
                     .filter(|path| {
                         path.is_file()
                             && path.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-                                n.starts_with("longbridge")
+                                (n.starts_with("changqiao") || n.starts_with("longbridge"))
                                     && std::path::Path::new(n)
                                         .extension()
                                         .is_some_and(|ext| ext.eq_ignore_ascii_case("log"))

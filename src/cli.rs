@@ -19,7 +19,7 @@ pub struct ParseError {
 #[must_use]
 pub fn help_text(bin_name: &str) -> String {
     format!(
-        "Longbridge Terminal\n\n用法：\n  {bin_name} [选项]\n\n选项：\n  -h, --help       显示帮助信息\n  -V, --version    显示版本信息\n      --logout     清理本地登录状态（预留）\n"
+        "长桥终端\n\n用法：\n  {bin_name} [选项]\n\n选项：\n  -h, --help       显示帮助信息\n  -V, --version    显示版本信息\n      --logout     清理本地登录状态（预留）\n"
     )
 }
 
@@ -46,13 +46,13 @@ where
             _ if arg.starts_with('-') => {
                 return Err(ParseError {
                     code: 2,
-                    message: format!("未知选项：{arg}\n\n{}", help_text("longbridge")),
+                    message: format!("未知选项：{arg}\n\n{}", help_text("changqiao")),
                 });
             }
             _ => {
                 return Err(ParseError {
                     code: 2,
-                    message: format!("不支持的位置参数：{arg}\n\n{}", help_text("longbridge")),
+                    message: format!("不支持的位置参数：{arg}\n\n{}", help_text("changqiao")),
                 });
             }
         }

@@ -10,7 +10,7 @@ pub fn default_log_dir() -> PathBuf {
     {
         let mut path = dirs::home_dir()
             .unwrap_or_else(|| dirs::data_local_dir().unwrap_or_else(std::env::temp_dir));
-        path.push("Library/Logs/Longbridge");
+        path.push("Library/Logs/ChangQiao");
         path
     }
     #[cfg(target_os = "windows")]
@@ -18,7 +18,7 @@ pub fn default_log_dir() -> PathBuf {
         let mut path = dirs::data_local_dir()
             .or_else(dirs::home_dir)
             .unwrap_or_else(std::env::temp_dir);
-        path.push("Longbridge\\Logs");
+        path.push("ChangQiao\\Logs");
         path
     }
     #[cfg(target_os = "linux")]
@@ -26,13 +26,13 @@ pub fn default_log_dir() -> PathBuf {
         let mut path = dirs::data_local_dir()
             .or_else(|| dirs::home_dir().map(|p| p.join(".local/share")))
             .unwrap_or_else(std::env::temp_dir);
-        path.push("longbridge/logs");
+        path.push("changqiao/logs");
         path
     }
 }
 
 fn fallback_log_dir() -> PathBuf {
-    std::env::temp_dir().join("longbridge").join("logs")
+    std::env::temp_dir().join("changqiao").join("logs")
 }
 
 #[must_use]
@@ -65,7 +65,7 @@ pub fn init() -> impl Any {
     let _ = ACTIVE_LOG_DIR.set(log_dir.clone());
 
     let writer = match RollingFileAppender::builder()
-        .filename_prefix("longbridge")
+        .filename_prefix("changqiao")
         .filename_suffix("log")
         .max_log_files(5)
         .rotation(Rotation::DAILY)
@@ -93,8 +93,10 @@ pub fn init() -> impl Any {
         .with_line_number(file_line)
         .with_writer(writer);
 
-    let dirs = "error,longbridge=debug";
-    let dirs = std::env::var("LONGBRIDGE_LOG").unwrap_or_else(|_| dirs.to_string());
+    let dirs = "error,changqiao=debug";
+    let dirs = std::env::var("CHANGQIAO_LOG")
+        .or_else(|_| std::env::var("LONGBRIDGE_LOG"))
+        .unwrap_or_else(|_| dirs.to_string());
     let subscriber = subscriber.with_filter(tracing_subscriber::EnvFilter::new(dirs));
 
     tracing_subscriber::registry().with(subscriber).init();

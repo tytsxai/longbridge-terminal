@@ -48,7 +48,7 @@ impl Default for Account {
             account_name: t!("Account.DefaultName").to_string(),
             account_type: "CashAccount".to_string(),
             org: OrgInfo {
-                name: "Longbridge".to_string(),
+                name: "长桥".to_string(),
             },
         }
     }

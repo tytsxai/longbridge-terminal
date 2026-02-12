@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "longbridge"
+name = "changqiao"
 version = "0.7.0-preview0"
 
 [profile.release]

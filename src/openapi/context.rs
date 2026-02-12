@@ -19,7 +19,11 @@ pub static RATE_LIMITED_TRADE_CTX: OnceLock<RateLimitedTradeContext> = OnceLock:
 /// Maps UI locale to API-supported languages: en, zh-CN, zh-HK
 /// Defaults to "en" if locale is not supported
 fn get_api_language() -> &'static str {
-    match std::env::var("LONGBRIDGE_LOCALE").ok().as_deref() {
+    match std::env::var("CHANGQIAO_LOCALE")
+        .or_else(|_| std::env::var("LONGBRIDGE_LOCALE"))
+        .ok()
+        .as_deref()
+    {
         Some("zh-CN") => "zh-CN",
         Some("zh-HK" | "zh-TW") => "zh-HK",
         _ => "en",
@@ -124,8 +128,9 @@ pub fn print_config_guide() {
     eprintln!("  LONGPORT_ACCESS_TOKEN=<your_access_token>");
     eprintln!();
     eprintln!("可选：通过 LONGPORT_HTTP_URL 与 LONGPORT_QUOTE_WS_URL 指定自定义服务地址");
-    eprintln!("可选：通过 LONGBRIDGE_LOCALE 指定界面语言（如 zh-CN / en）");
-    eprintln!("可选：通过 LONGBRIDGE_LOG 调整日志过滤（如 error,longbridge=info）");
+    eprintln!("可选：通过 CHANGQIAO_LOCALE 指定界面语言（如 zh-CN / en）");
+    eprintln!("可选：通过 CHANGQIAO_LOG 调整日志过滤（如 error,changqiao=info）");
+    eprintln!("兼容旧变量：LONGBRIDGE_LOCALE / LONGBRIDGE_LOG");
     eprintln!();
     eprintln!("获取 Token: https://open.longbridge.com");
     eprintln!();
@@ -176,13 +181,21 @@ mod tests {
 
     #[test]
     fn maps_locale_to_supported_api_language() {
-        let _locale = EnvGuard::set("LONGBRIDGE_LOCALE", Some("zh-HK"));
+        let _locale = EnvGuard::set("CHANGQIAO_LOCALE", Some("zh-HK"));
         assert_eq!(get_api_language(), "zh-HK");
 
-        let _locale = EnvGuard::set("LONGBRIDGE_LOCALE", Some("en-US"));
+        let _locale = EnvGuard::set("CHANGQIAO_LOCALE", Some("en-US"));
         assert_eq!(get_api_language(), "en");
 
-        let _locale = EnvGuard::set("LONGBRIDGE_LOCALE", Some("unknown"));
+        let _locale = EnvGuard::set("CHANGQIAO_LOCALE", Some("unknown"));
         assert_eq!(get_api_language(), "en");
+
+        let _locale = EnvGuard::set("CHANGQIAO_LOCALE", None);
+        let _legacy_locale = EnvGuard::set("LONGBRIDGE_LOCALE", Some("zh-HK"));
+        assert_eq!(get_api_language(), "zh-HK");
+
+        let _locale = EnvGuard::set("CHANGQIAO_LOCALE", Some("zh-CN"));
+        let _legacy_locale = EnvGuard::set("LONGBRIDGE_LOCALE", Some("en-US"));
+        assert_eq!(get_api_language(), "zh-CN");
     }
 }

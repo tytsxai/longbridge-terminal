@@ -33,7 +33,7 @@ pub use cli::Args;
 async fn main() {
     let bin_name = std::env::args()
         .next()
-        .unwrap_or_else(|| "longbridge".to_string());
+        .unwrap_or_else(|| "changqiao".to_string());
 
     let command = match cli::parse_args(std::env::args().skip(1)) {
         Ok(command) => command,
@@ -58,7 +58,7 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     if !std::io::stdout().is_terminal() {
-        eprintln!("Longbridge Terminal 需要在交互式终端（TTY）中运行。");
+        eprintln!("长桥终端 需要在交互式终端（TTY）中运行。");
         std::process::exit(1);
     }
 
@@ -66,7 +66,7 @@ async fn main() {
         Ok(lock) => lock,
         Err(err) => {
             if err.kind() == std::io::ErrorKind::WouldBlock {
-                eprintln!("已有 longbridge 进程在运行，请先关闭后再启动。");
+                eprintln!("已有 changqiao 进程在运行，请先关闭后再启动。");
             } else {
                 eprintln!("获取进程锁失败：{err}");
             }
@@ -75,7 +75,9 @@ async fn main() {
     };
 
     // Set default locale to Chinese
-    let locale = std::env::var("LONGBRIDGE_LOCALE").unwrap_or_else(|_| "zh-CN".to_string());
+    let locale = std::env::var("CHANGQIAO_LOCALE")
+        .or_else(|_| std::env::var("LONGBRIDGE_LOCALE"))
+        .unwrap_or_else(|_| "zh-CN".to_string());
     rust_i18n::set_locale(&locale);
 
     // Initialize logger

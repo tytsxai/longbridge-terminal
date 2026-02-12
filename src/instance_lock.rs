@@ -8,15 +8,15 @@ pub fn lock_file_path() -> PathBuf {
     #[cfg(target_os = "macos")]
     {
         let mut path = dirs::home_dir().unwrap_or_else(std::env::temp_dir);
-        path.push("Library/Application Support/Longbridge");
-        path.push("longbridge.lock");
+        path.push("Library/Application Support/ChangQiao");
+        path.push("changqiao.lock");
         path
     }
     #[cfg(target_os = "windows")]
     {
         let mut path = dirs::data_local_dir().unwrap_or_else(std::env::temp_dir);
-        path.push("Longbridge");
-        path.push("longbridge.lock");
+        path.push("ChangQiao");
+        path.push("changqiao.lock");
         path
     }
     #[cfg(target_os = "linux")]
@@ -24,8 +24,8 @@ pub fn lock_file_path() -> PathBuf {
         let mut path = dirs::data_local_dir()
             .or_else(|| dirs::home_dir().map(|p| p.join(".local/share")))
             .unwrap_or_else(std::env::temp_dir);
-        path.push("longbridge");
-        path.push("longbridge.lock");
+        path.push("changqiao");
+        path.push("changqiao.lock");
         path
     }
 }
@@ -56,8 +56,8 @@ mod tests {
         let path = lock_file_path();
         assert!(
             path.file_name()
-                .is_some_and(|name| name == "longbridge.lock"),
-            "lock path should end with longbridge.lock"
+                .is_some_and(|name| name == "changqiao.lock"),
+            "lock path should end with changqiao.lock"
         );
     }
 }
