@@ -19,6 +19,7 @@ cargo fmt --all -- --check
 cargo clippy -- -D warnings
 cargo test
 cargo check
+./scripts/release_preflight.sh
 
 # 可执行文件基础可运维性检查（无需 TTY）
 cargo run -- --help > /dev/null
@@ -83,6 +84,12 @@ changqiao
 - `Failed to fetch`
 - `Rate limit error`
 - `配置错误` / `Configuration Error`
+
+可直接执行阈值扫描：
+
+```bash
+./scripts/log_alert_guard.sh
+```
 
 ### 3.2 放行标准（Go）
 

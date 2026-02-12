@@ -139,6 +139,7 @@ changqiao
 - [发布日 Runbook（中文）](docs/release_runbook_zh-CN.md)
 - [值班速查（中文）](docs/oncall_cheatsheet_zh-CN.md)
 - [事故复盘模板（中文）](docs/postmortem_template_zh-CN.md)
+- [运行治理与责任模板（中文）](docs/ops_governance_zh-CN.md)
 
 ### 深入阅读
 

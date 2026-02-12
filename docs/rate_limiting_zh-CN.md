@@ -161,7 +161,7 @@ cargo test --lib rate_limiter
 
 1. 启用调试日志:
    ```bash
-   export RUST_LOG=debug
+   export CHANGQIAO_LOG=error,changqiao=debug
    ```
 
 2. 查找限流器日志:
@@ -195,7 +195,7 @@ cargo test --lib rate_limiter
 启用调试日志以查看限流器活动:
 
 ```bash
-export RUST_LOG=changqiao=debug
+export CHANGQIAO_LOG=error,changqiao=debug
 cargo run
 ```
 

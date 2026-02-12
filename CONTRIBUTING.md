@@ -111,7 +111,7 @@ cargo test
 开启调试日志：
 
 ```bash
-RUST_LOG=debug cargo run
+CHANGQIAO_LOG=error,changqiao=debug cargo run
 ```
 
 ## 交流与反馈

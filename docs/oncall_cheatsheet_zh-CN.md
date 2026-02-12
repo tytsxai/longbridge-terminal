@@ -36,7 +36,32 @@
 
 - 5 分钟内同类错误 ≥ 20 次。
 
-## 3) 安装升级失败
+快速判断是否达告警阈值：
+
+```bash
+./scripts/log_alert_guard.sh
+```
+
+## 3) 资产页刷新失败或长时间不更新
+
+### 现象
+
+- 日志出现 `获取资产数据超时` 或 `获取资产数据失败，已回退为展示上次成功数据`。
+- 资产页数字不再更新，但仍显示旧数据。
+
+### 立即处理
+
+1. 先确认上游 OpenAPI 连通性与 Token 状态。
+2. 在资产页手动按 `R` 触发一次刷新，观察日志是否恢复成功。
+3. 若连续失败，告知用户当前展示的是“上次成功快照”，避免误判为实时数据。
+
+### 升级条件
+
+- 连续 3 次手动刷新仍失败。
+- 15 分钟内无法恢复资产数据刷新。
+
+
+## 4) 安装升级失败
 
 ### 现象
 
@@ -52,7 +77,7 @@
 mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
-## 4) 标准回滚步骤
+## 5) 标准回滚步骤
 
 ```bash
 cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev
@@ -67,7 +92,7 @@ mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 changqiao
 ```
 
-## 5) 单实例冲突
+## 6) 单实例冲突
 
 ### 现象
 
