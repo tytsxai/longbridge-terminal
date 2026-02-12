@@ -1,6 +1,6 @@
-# Longbridge Terminal 贡献指南
+# 长桥终端 贡献指南
 
-感谢你关注并参与 Longbridge Terminal！本文档说明本仓库的开发约定、提交流程与质量要求。
+感谢你关注并参与 长桥终端！本文档说明本仓库的开发约定、提交流程与质量要求。
 
 ## 快速开始
 
@@ -105,8 +105,8 @@ cargo test
 
 日志目录：
 
-- macOS：`~/Library/Logs/longbridge-terminal/`
-- Linux：`~/.local/share/longbridge-terminal/logs/`
+- macOS：`~/Library/Logs/ChangQiao/`
+- Linux：`~/.local/share/changqiao/logs/`
 
 开启调试日志：
 

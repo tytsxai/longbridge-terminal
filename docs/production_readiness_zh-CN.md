@@ -1,4 +1,4 @@
-# Longbridge Terminal 生产就绪清单（Ready）
+# 长桥终端 生产就绪清单（Ready）
 
 > 目标：在不做大改的前提下，让项目达到“可交付、可上线、可维护”的最小健康状态。
 
@@ -19,7 +19,7 @@ cargo check
 
 - 仅支持交互式终端（TTY）运行。
 - 运行账号需可写日志目录（失败时会自动降级到系统临时目录）。
-- 网络可访问 Longbridge OpenAPI 端点。
+- 网络可访问 长桥 OpenAPI 端点。
 
 ### 1.3 必需配置（环境变量）
 
@@ -30,8 +30,9 @@ cargo check
 可选：
 
 - `LONGPORT_REGION`（示例：`cn`）
-- `LONGBRIDGE_LOCALE`（示例：`zh-CN` / `en`）
-- `LONGBRIDGE_LOG`（示例：`error,longbridge=info`）
+- `CHANGQIAO_LOCALE`（示例：`zh-CN` / `en`）
+- `CHANGQIAO_LOG`（示例：`error,changqiao=info`）
+- 兼容旧变量：`LONGBRIDGE_LOCALE`、`LONGBRIDGE_LOG`
 - `LONGPORT_HTTP_URL`、`LONGPORT_QUOTE_WS_URL`（私有化场景）
 
 ## 2. 关键稳定性机制（当前已具备）
@@ -40,7 +41,7 @@ cargo check
 
 - CLI 基础参数已可用：`--help`、`--version`、`--logout`（保留位）。
 - `--help` / `--version` 不依赖 TTY，可在 CI、安装脚本和巡检脚本中调用。
-- 单实例锁已启用：同一用户环境下禁止重复启动多个 `longbridge` 进程，避免终端状态和订阅状态互相污染。
+- 单实例锁已启用：同一用户环境下禁止重复启动多个 `changqiao` 进程，避免终端状态和订阅状态互相污染。
 - 支持系统信号优雅退出（`SIGINT`/`SIGTERM` 等），确保退出时恢复终端状态。
 
 ### 2.1 API 限流与重试
@@ -87,7 +88,7 @@ cargo check
 
 ```bash
 curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | sh
-longbridge
+changqiao
 ```
 
 ## 4. 运行监控与告警（最小可行）
@@ -109,13 +110,13 @@ longbridge
 保留上一版本二进制：
 
 ```bash
-cp /usr/local/bin/longbridge /usr/local/bin/longbridge.prev
+cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev
 ```
 
 升级失败后回滚：
 
 ```bash
-mv /usr/local/bin/longbridge.prev /usr/local/bin/longbridge
+mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
 ### 5.2 配置回滚

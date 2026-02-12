@@ -1,4 +1,4 @@
-# Longbridge Terminal 发布日 Runbook（中文）
+# 长桥终端 发布日 Runbook（中文）
 
 > 适用场景：版本即将上线，要求“可验证、可回滚、可追责”。
 
@@ -42,7 +42,7 @@ cargo run -- --version > /dev/null
 先备份线上旧版本二进制：
 
 ```bash
-cp /usr/local/bin/longbridge /usr/local/bin/longbridge.prev
+cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev
 ```
 
 ## 2. 发布步骤（T0）
@@ -56,7 +56,7 @@ curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | s
 ### 2.2 启动冒烟（人工）
 
 ```bash
-longbridge
+changqiao
 ```
 
 重点验证：
@@ -66,7 +66,7 @@ longbridge
 3. 账户/持仓页可打开（若账号有交易权限）。
 4. 搜索功能可返回结果。
 
-若提示 `Another longbridge process is already running.`，先确认并终止旧进程后再继续发布。
+若提示 `已有 changqiao 进程在运行，请先关闭后再启动。`，先确认并终止旧进程后再继续发布。
 
 ## 3. 发布后 30 分钟观察（T+30）
 
@@ -74,9 +74,9 @@ longbridge
 
 检查日志目录最新文件（按平台）：
 
-- macOS：`~/Library/Logs/Longbridge/`
-- Linux：`~/.local/share/longbridge/logs/`
-- 降级目录（若主目录不可写）：系统临时目录 `.../longbridge/logs/`
+- macOS：`~/Library/Logs/ChangQiao/`
+- Linux：`~/.local/share/changqiao/logs/`
+- 降级目录（若主目录不可写）：系统临时目录 `.../changqiao/logs/`
 
 关注关键错误：
 
@@ -103,13 +103,13 @@ longbridge
 ### 4.2 回滚命令
 
 ```bash
-mv /usr/local/bin/longbridge.prev /usr/local/bin/longbridge
+mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
 回滚后立即执行冒烟：
 
 ```bash
-longbridge
+changqiao
 ```
 
 ## 5. 事后复盘（T+1 天）

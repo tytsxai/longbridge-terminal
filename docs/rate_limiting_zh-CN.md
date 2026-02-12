@@ -195,7 +195,7 @@ cargo test --lib rate_limiter
 启用调试日志以查看限流器活动:
 
 ```bash
-export RUST_LOG=longbridge=debug
+export RUST_LOG=changqiao=debug
 cargo run
 ```
 

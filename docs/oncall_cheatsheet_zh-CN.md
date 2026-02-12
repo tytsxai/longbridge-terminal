@@ -1,4 +1,4 @@
-# Longbridge Terminal 值班速查（On-call Cheatsheet）
+# 长桥终端 值班速查（On-call Cheatsheet）
 
 ## 1) 启动失败
 
@@ -11,9 +11,9 @@
 
 1. 检查并补齐：`LONGPORT_APP_KEY`、`LONGPORT_APP_SECRET`、`LONGPORT_ACCESS_TOKEN`。
 2. 确认在交互式终端（TTY）运行，而不是后台管道。
-3. 重启：`longbridge`。
+3. 重启：`changqiao`。
 
-补充：可先执行 `longbridge --version` 验证二进制可用；若输出正常但 `longbridge` 启动时报 “already running”，说明存在残留进程或并发启动。
+补充：可先执行 `changqiao --version` 验证二进制可用；若输出正常但 `changqiao` 启动时报“已有 changqiao 进程在运行，请先关闭后再启动。”，说明存在残留进程或并发启动。
 
 ### 升级条件
 
@@ -28,7 +28,7 @@
 
 ### 立即处理
 
-1. 检查外网连通性与 Longbridge API 可达性。
+1. 检查外网连通性与长桥 OpenAPI 可达性。
 2. 检查 Token 是否过期并重新生成。
 3. 观察日志是否出现 `Rate limit error`（触发限流重试）。
 
@@ -49,29 +49,29 @@
 3. 恢复到上一版本：
 
 ```bash
-mv /usr/local/bin/longbridge.prev /usr/local/bin/longbridge
+mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
 ## 4) 标准回滚步骤
 
 ```bash
-cp /usr/local/bin/longbridge /usr/local/bin/longbridge.prev
+cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev
 # 部署新版本...
 # 出现故障则回滚：
-mv /usr/local/bin/longbridge.prev /usr/local/bin/longbridge
+mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
 回滚后必须重新冒烟：
 
 ```bash
-longbridge
+changqiao
 ```
 
 ## 5) 单实例冲突
 
 ### 现象
 
-- 启动报错：`Another longbridge process is already running.`
+- 启动报错：`已有 changqiao 进程在运行，请先关闭后再启动。`
 
 ### 立即处理
 

@@ -12,7 +12,7 @@ exit:
   multi_instance: "another instance is running, please close it first"
 qrcode_view:
   scan_hint: |
-    To sign in, scan the QR code using Longbridge iOS or Android app.
+    To sign in, scan the QR code using ChangQiao iOS or Android app.
     https://longbridge.hk/download
   error:
     heading: "Failed to create QR code"
@@ -23,7 +23,7 @@ qrcode_view:
 user:
   open_account:
     heading: "Account is not opened"
-    content: "Please open account in other LongBridge app"
+    content: "Please open account in other ChangQiao app"
 Prompt:
   Esc: Press 'ESC' to cancel
 Candlestick:

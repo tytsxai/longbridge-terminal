@@ -1,4 +1,4 @@
-Longbridge Terminal (v%{version})
-https://longbridge.com
+长桥终端 (v%{version})
+https://open.longbridge.com
 
-© 2023 - 2026 Long Bridge HK Limited. All Rights Reserved.
+© 2023 - 2026 长桥香港有限公司. 保留所有权利。
