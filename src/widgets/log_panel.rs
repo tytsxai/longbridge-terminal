@@ -6,11 +6,19 @@ use ratatui::{
     Frame,
 };
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// 判断文件名是否为 changqiao/longbridge 日志文件
+fn is_log_file_name(name: &str) -> bool {
+    (name.starts_with("changqiao") || name.starts_with("longbridge"))
+        && Path::new(name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("log"))
+}
 
 /// Get the path to the latest log file
 fn get_latest_log_file() -> Option<PathBuf> {
-    let log_dir = crate::logger::default_log_dir();
+    let log_dir = crate::logger::active_log_dir();
 
     // Find all log files in the directory
     let mut log_files: Vec<PathBuf> = fs::read_dir(&log_dir)
@@ -22,7 +30,7 @@ fn get_latest_log_file() -> Option<PathBuf> {
                 && path
                     .file_name()
                     .and_then(|n| n.to_str())
-                    .is_some_and(|n| n == "changqiao.log" || n == "longbridge.log")
+                    .is_some_and(is_log_file_name)
         })
         .collect();
 

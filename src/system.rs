@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_arguments, clippy::too_many_lines)]
-use std::{collections::HashMap, sync::atomic::Ordering, sync::Mutex};
+use std::{collections::HashMap, sync::atomic::Ordering, sync::Mutex, time::Duration};
 
 use atomic::Atomic;
 use bevy_ecs::{
@@ -853,12 +853,37 @@ pub static PORTFOLIO_VIEW: std::sync::LazyLock<
     std::sync::RwLock<Option<crate::data::PortfolioView>>,
 > = std::sync::LazyLock::new(|| std::sync::RwLock::new(None));
 
+// Prevent concurrent portfolio refresh tasks from piling up
+static PORTFOLIO_REFRESH_EXECUTING: Atomic<bool> = Atomic::new(false);
+
 // Refresh Portfolio data
 pub fn refresh_portfolio() {
+    if PORTFOLIO_REFRESH_EXECUTING.swap(true, Ordering::Relaxed) {
+        tracing::debug!("跳过资产刷新：已有刷新任务在执行");
+        return;
+    }
+
     RT.get().unwrap().spawn(async move {
+        struct RefreshFlagGuard;
+
+        impl Drop for RefreshFlagGuard {
+            fn drop(&mut self) {
+                PORTFOLIO_REFRESH_EXECUTING.store(false, Ordering::Relaxed);
+            }
+        }
+
+        let _refresh_flag_guard = RefreshFlagGuard;
+
         tracing::info!("开始刷新资产数据...");
-        match crate::api::account::fetch_portfolio().await {
-            Ok(view) => {
+
+        let fetch_result = tokio::time::timeout(
+            Duration::from_secs(12),
+            crate::api::account::fetch_portfolio(),
+        )
+        .await;
+
+        match fetch_result {
+            Ok(Ok(view)) => {
                 tracing::info!(
                     "成功获取资产数据：{} 条持仓，总资产 {}",
                     view.holdings.len(),
@@ -867,8 +892,24 @@ pub fn refresh_portfolio() {
 
                 *PORTFOLIO_VIEW.write().expect("poison") = Some(view);
             }
-            Err(e) => {
-                tracing::error!("获取资产数据失败：{}", e);
+            Ok(Err(err)) => {
+                let has_cache = PORTFOLIO_VIEW.read().expect("poison").is_some();
+                if has_cache {
+                    tracing::warn!(
+                        error = %err,
+                        "获取资产数据失败，已回退为展示上次成功数据"
+                    );
+                } else {
+                    tracing::error!(error = %err, "获取资产数据失败，且当前无可回退数据");
+                }
+            }
+            Err(_) => {
+                let has_cache = PORTFOLIO_VIEW.read().expect("poison").is_some();
+                if has_cache {
+                    tracing::warn!("获取资产数据超时，已回退为展示上次成功数据");
+                } else {
+                    tracing::error!("获取资产数据超时，且当前无可回退数据");
+                }
             }
         }
     });

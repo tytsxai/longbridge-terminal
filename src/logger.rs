@@ -52,6 +52,7 @@ pub fn init() -> impl Any {
     use tracing_appender::rolling::{RollingFileAppender, Rotation};
     use tracing_subscriber::fmt;
     use tracing_subscriber::prelude::*;
+    use tracing_subscriber::EnvFilter;
 
     let primary_log_dir = default_log_dir();
     let log_dir = if std::fs::create_dir_all(&primary_log_dir).is_ok() {
@@ -93,11 +94,22 @@ pub fn init() -> impl Any {
         .with_line_number(file_line)
         .with_writer(writer);
 
-    let dirs = "error,changqiao=debug";
-    let dirs = std::env::var("CHANGQIAO_LOG")
+    let default_filter = "error,changqiao=debug";
+    let configured_filter = std::env::var("CHANGQIAO_LOG")
         .or_else(|_| std::env::var("LONGBRIDGE_LOG"))
-        .unwrap_or_else(|_| dirs.to_string());
-    let subscriber = subscriber.with_filter(tracing_subscriber::EnvFilter::new(dirs));
+        .unwrap_or_else(|_| default_filter.to_string());
+
+    let filter = match EnvFilter::try_new(configured_filter.clone()) {
+        Ok(filter) => filter,
+        Err(err) => {
+            eprintln!(
+                "日志过滤配置无效（CHANGQIAO_LOG={configured_filter}）：{err}，将回退到默认过滤规则 {default_filter}"
+            );
+            EnvFilter::new(default_filter)
+        }
+    };
+
+    let subscriber = subscriber.with_filter(filter);
 
     tracing_subscriber::registry().with(subscriber).init();
     guard

@@ -44,6 +44,43 @@ pub enum AppState {
     WatchlistStock,
 }
 
+fn is_log_file_name(name: &str) -> bool {
+    (name.starts_with("changqiao") || name.starts_with("longbridge"))
+        && std::path::Path::new(name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("log"))
+}
+
+fn latest_log_file_in(log_dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    use std::fs;
+
+    let mut log_files: Vec<std::path::PathBuf> = fs::read_dir(log_dir)
+        .ok()?
+        .filter_map(std::result::Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(is_log_file_name)
+        })
+        .collect();
+
+    log_files.sort_by(|a, b| {
+        let time_a = fs::metadata(a).and_then(|m| m.modified()).ok();
+        let time_b = fs::metadata(b).and_then(|m| m.modified()).ok();
+        match (time_a, time_b) {
+            (Some(ta), Some(tb)) => tb.cmp(&ta),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+    });
+
+    log_files.into_iter().next()
+}
+
 #[allow(clippy::too_many_lines)]
 pub async fn run(
     _args: crate::Args,
@@ -282,43 +319,13 @@ pub async fn run(
         let tx = update_tx.clone();
         async move {
             use std::fs;
-            use std::path::PathBuf;
             use std::time::SystemTime;
 
             let mut last_modified: Option<SystemTime> = None;
             let mut last_size: u64 = 0;
+            let log_dir = crate::logger::active_log_dir();
 
-            // Helper to get the latest log file
-            let get_latest_log_file = || -> Option<PathBuf> {
-                let log_dir = crate::logger::active_log_dir();
-                let mut log_files: Vec<PathBuf> = fs::read_dir(&log_dir)
-                    .ok()?
-                    .filter_map(std::result::Result::ok)
-                    .map(|entry| entry.path())
-                    .filter(|path| {
-                        path.is_file()
-                            && path.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-                                (n.starts_with("changqiao") || n.starts_with("longbridge"))
-                                    && std::path::Path::new(n)
-                                        .extension()
-                                        .is_some_and(|ext| ext.eq_ignore_ascii_case("log"))
-                            })
-                    })
-                    .collect();
-
-                log_files.sort_by(|a, b| {
-                    let time_a = fs::metadata(a).and_then(|m| m.modified()).ok();
-                    let time_b = fs::metadata(b).and_then(|m| m.modified()).ok();
-                    match (time_a, time_b) {
-                        (Some(ta), Some(tb)) => tb.cmp(&ta),
-                        (Some(_), None) => std::cmp::Ordering::Less,
-                        (None, Some(_)) => std::cmp::Ordering::Greater,
-                        (None, None) => std::cmp::Ordering::Equal,
-                    }
-                });
-
-                log_files.into_iter().next()
-            };
+            tracing::debug!(log_dir = %log_dir.display(), "日志面板监听任务已启动");
 
             loop {
                 tokio::time::sleep(Duration::from_millis(500)).await;
@@ -328,7 +335,7 @@ pub async fn run(
                     continue;
                 }
 
-                if let Some(log_file) = get_latest_log_file() {
+                if let Some(log_file) = latest_log_file_in(&log_dir) {
                     if let Ok(metadata) = fs::metadata(&log_file) {
                         let modified = metadata.modified().ok();
                         let size = metadata.len();
@@ -858,4 +865,61 @@ fn show_index(world: &mut World, index: usize) {
     let indexes = world.resource::<Carousel<[Counter; 3]>>().current();
     world.insert_resource(system::StockDetail(indexes[index].clone()));
     world.insert_resource(NextState(Some(AppState::WatchlistStock)));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_log_file_name, latest_log_file_in};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    struct TempDirGuard {
+        path: PathBuf,
+    }
+
+    impl TempDirGuard {
+        fn new() -> Self {
+            let unique = format!(
+                "changqiao-app-tests-{}",
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or_default()
+            );
+            let path = std::env::temp_dir().join(unique);
+            fs::create_dir_all(&path).expect("failed to create temp dir");
+            Self { path }
+        }
+    }
+
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn accepts_expected_log_filenames() {
+        assert!(is_log_file_name("changqiao.log"));
+        assert!(is_log_file_name("changqiao.2026-02-12.log"));
+        assert!(is_log_file_name("longbridge.log"));
+        assert!(!is_log_file_name("changqiao.txt"));
+        assert!(!is_log_file_name("other.log"));
+    }
+
+    #[test]
+    fn returns_latest_log_file() {
+        let temp_dir = TempDirGuard::new();
+
+        let old_log = temp_dir.path.join("changqiao.old.log");
+        let new_log = temp_dir.path.join("changqiao.new.log");
+
+        fs::write(&old_log, "old").expect("failed to write old log");
+        std::thread::sleep(Duration::from_millis(20));
+        fs::write(&new_log, "new").expect("failed to write new log");
+
+        let selected = latest_log_file_in(&temp_dir.path).expect("latest log not found");
+        assert_eq!(selected, new_log);
+    }
 }

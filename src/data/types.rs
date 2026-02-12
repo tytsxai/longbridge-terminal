@@ -392,7 +392,10 @@ impl Market {
         use time::Date;
 
         // Start from the first day of the month
-        let first_day = Date::from_calendar_date(year, month, 1).unwrap();
+        let Ok(first_day) = Date::from_calendar_date(year, month, 1) else {
+            // Defensive fallback: invalid date should never happen for month/day=1
+            return 1;
+        };
         let first_weekday = first_day.weekday();
 
         // Calculate days until first occurrence of target weekday
@@ -407,8 +410,7 @@ impl Market {
 
         // Convert to ordinal (day of year)
         Date::from_calendar_date(year, month, target_day)
-            .unwrap()
-            .ordinal()
+            .map_or_else(|_| first_day.ordinal(), time::Date::ordinal)
     }
 
     /// Check if market is in trading session (simplified implementation)
@@ -422,14 +424,16 @@ impl Market {
             Self::US => {
                 // Use correct offset based on DST
                 let offset = if Self::is_us_daylight_saving_time(now) {
-                    time::UtcOffset::from_hms(-4, 0, 0).unwrap() // EDT
+                    // EDT
+                    time::UtcOffset::from_hms(-4, 0, 0).unwrap_or(time::UtcOffset::UTC)
                 } else {
-                    time::UtcOffset::from_hms(-5, 0, 0).unwrap() // EST
+                    // EST
+                    time::UtcOffset::from_hms(-5, 0, 0).unwrap_or(time::UtcOffset::UTC)
                 };
                 now.to_offset(offset)
             }
             Self::HK | Self::CN | Self::SG => {
-                now.to_offset(time::UtcOffset::from_hms(8, 0, 0).unwrap())
+                now.to_offset(time::UtcOffset::from_hms(8, 0, 0).unwrap_or(time::UtcOffset::UTC))
             } // HKT/CST/SGT
         };
 
