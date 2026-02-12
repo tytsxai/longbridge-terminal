@@ -44,27 +44,44 @@ impl Terminal {
     pub fn enter_full_screen() {
         use crossterm::{cursor, terminal};
 
-        _ = terminal::enable_raw_mode();
-        _ = crossterm::execute!(
+        if let Err(err) = terminal::enable_raw_mode() {
+            eprintln!("启用终端原始模式失败：{err}");
+            tracing::error!(error = %err, "启用终端原始模式失败");
+            std::process::exit(1);
+        }
+
+        if let Err(err) = crossterm::execute!(
             std::io::stdout(),
             terminal::EnterAlternateScreen,
             terminal::Clear(terminal::ClearType::All),
             terminal::Clear(terminal::ClearType::Purge),
             cursor::MoveTo(0, 0),
             cursor::Hide
-        );
+        ) {
+            let _ = terminal::disable_raw_mode();
+            eprintln!("进入全屏终端失败：{err}");
+            tracing::error!(error = %err, "进入全屏终端失败");
+            std::process::exit(1);
+        }
     }
 
     pub fn exit_full_screen() {
         use crossterm::{cursor, terminal};
 
         // Restore terminal state
-        _ = crossterm::execute!(
+        if let Err(err) = crossterm::execute!(
             std::io::stdout(),
             cursor::Show,                   // Show cursor
             terminal::LeaveAlternateScreen, // Leave alternate screen
-        );
-        _ = terminal::disable_raw_mode(); // Disable raw mode
+        ) {
+            eprintln!("恢复终端屏幕状态失败：{err}");
+            tracing::warn!(error = %err, "恢复终端屏幕状态失败");
+        }
+
+        if let Err(err) = terminal::disable_raw_mode() {
+            eprintln!("退出终端原始模式失败：{err}");
+            tracing::warn!(error = %err, "退出终端原始模式失败");
+        }
     }
 
     /// Graceful exit - cleanup terminal and exit program

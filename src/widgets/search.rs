@@ -163,10 +163,15 @@ where
                     }
                     let input = rx.borrow_and_update().to_string();
                     if input.is_empty() {
-                        options.lock().unwrap().clear();
+                        options
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
+                            .clear();
                     } else {
                         let result = (task)(input).await;
-                        *options.lock().unwrap() = result;
+                        *options
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner) = result;
                     }
                     let _ = update.send(CommandQueue::default());
                 }
@@ -209,7 +214,10 @@ where
                     self.history.insert(0, selected.clone());
 
                     self.input.reset();
-                    self.options.lock().unwrap().clear();
+                    self.options
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .clear();
                     self.visible = false;
                     return (true, Some(selected));
                 }
@@ -233,7 +241,10 @@ where
     }
 
     pub fn options(&self) -> Vec<T> {
-        let opts = self.options.lock().unwrap();
+        let opts = self
+            .options
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !opts.is_empty() {
             return opts.clone();
         }
@@ -245,7 +256,10 @@ where
     }
 
     fn options_length(&self) -> usize {
-        let opts = self.options.lock().unwrap();
+        let opts = self
+            .options
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !opts.is_empty() {
             return opts.len();
         }
@@ -257,7 +271,10 @@ where
     }
 
     fn option(&self, index: usize) -> Option<T> {
-        let options = self.options.lock().unwrap();
+        let options = self
+            .options
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         options
             .get(index)
             .cloned()

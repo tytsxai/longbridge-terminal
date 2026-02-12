@@ -8,13 +8,16 @@ static ACTIVE_LOG_DIR: OnceLock<PathBuf> = OnceLock::new();
 pub fn default_log_dir() -> PathBuf {
     #[cfg(target_os = "macos")]
     {
-        let mut path = dirs::home_dir().expect("Unable to get user home directory");
+        let mut path = dirs::home_dir()
+            .unwrap_or_else(|| dirs::data_local_dir().unwrap_or_else(std::env::temp_dir));
         path.push("Library/Logs/Longbridge");
         path
     }
     #[cfg(target_os = "windows")]
     {
-        let mut path = dirs::data_local_dir().expect("Unable to get local data directory");
+        let mut path = dirs::data_local_dir()
+            .or_else(dirs::home_dir)
+            .unwrap_or_else(std::env::temp_dir);
         path.push("Longbridge\\Logs");
         path
     }
@@ -22,7 +25,7 @@ pub fn default_log_dir() -> PathBuf {
     {
         let mut path = dirs::data_local_dir()
             .or_else(|| dirs::home_dir().map(|p| p.join(".local/share")))
-            .expect("Unable to get data directory");
+            .unwrap_or_else(std::env::temp_dir);
         path.push("longbridge/logs");
         path
     }

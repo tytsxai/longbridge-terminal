@@ -340,7 +340,10 @@ pub async fn run(
 
                             // Trigger UI refresh by sending empty command queue
                             let queue = CommandQueue::default();
-                            _ = tx.send(queue);
+                            if tx.send(queue).is_err() {
+                                tracing::debug!("应用事件通道已关闭，停止日志监听任务");
+                                break;
+                            }
                         }
                     }
                 }
