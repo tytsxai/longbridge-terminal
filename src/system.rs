@@ -277,63 +277,186 @@ pub async fn fetch_portfolio_data() -> anyhow::Result<(Vec<PositionInfo>, Decima
     Ok((positions, balance, total_market_value))
 }
 
-// WebSocket subscription management (simplified implementation)
-pub struct WsManager;
+// WebSocket subscription management
+#[derive(Clone, Debug)]
+struct WsSubscription {
+    symbols: Vec<Counter>,
+    sub_flags: longport::quote::SubFlags,
+}
+
+pub struct WsManager {
+    subscriptions: Mutex<HashMap<String, WsSubscription>>,
+}
 
 impl WsManager {
-    #[allow(clippy::unused_async)]
-    pub async fn unmount(&self, _name: &str) -> anyhow::Result<()> {
-        // TODO: Use longport SDK to unsubscribe
+    fn new() -> Self {
+        Self {
+            subscriptions: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn sub_flags_from_type(sub_type: SubTypes) -> longport::quote::SubFlags {
+        match sub_type {
+            SubTypes::LIST => longport::quote::SubFlags::QUOTE,
+            SubTypes::DETAIL => longport::quote::SubFlags::QUOTE | longport::quote::SubFlags::DEPTH,
+            SubTypes::DEPTH => longport::quote::SubFlags::DEPTH,
+            SubTypes::TRADES => longport::quote::SubFlags::TRADE,
+        }
+    }
+
+    fn normalize_symbols(symbols: &[Counter]) -> Vec<Counter> {
+        let mut seen = std::collections::HashSet::new();
+        let mut deduped = Vec::new();
+
+        for symbol in symbols {
+            if seen.insert(symbol.clone()) {
+                deduped.push(symbol.clone());
+            }
+        }
+
+        deduped
+    }
+
+    fn remove_subscription(&self, name: &str) -> Option<WsSubscription> {
+        self.subscriptions
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .remove(name)
+    }
+
+    fn save_subscription(
+        &self,
+        name: &str,
+        symbols: Vec<Counter>,
+        sub_flags: longport::quote::SubFlags,
+    ) {
+        self.subscriptions
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(name.to_string(), WsSubscription { symbols, sub_flags });
+    }
+
+    async fn subscribe(
+        &self,
+        name: &str,
+        symbols: &[Counter],
+        sub_flags: longport::quote::SubFlags,
+    ) -> anyhow::Result<()> {
+        let symbols = Self::normalize_symbols(symbols);
+        let symbol_strings: Vec<String> = symbols
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
+
+        // Always cleanup old subscription first to avoid duplicate pushes.
+        if let Some(previous) = self.remove_subscription(name) {
+            let previous_symbols: Vec<String> = previous
+                .symbols
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect();
+            if let Err(err) =
+                crate::openapi::helpers::unsubscribe_quotes(&previous_symbols, previous.sub_flags)
+                    .await
+            {
+                tracing::warn!(
+                    subscription = name,
+                    error = %err,
+                    "取消旧订阅失败，继续尝试重建订阅"
+                );
+            }
+        }
+
+        if symbol_strings.is_empty() {
+            tracing::debug!(subscription = name, "订阅目标为空，跳过重建");
+            return Ok(());
+        }
+
+        crate::openapi::helpers::subscribe_quotes(&symbol_strings, sub_flags).await?;
+        self.save_subscription(name, symbols, sub_flags);
         Ok(())
+    }
+
+    pub async fn unmount(&self, name: &str) -> anyhow::Result<()> {
+        let Some(previous) = self.remove_subscription(name) else {
+            return Ok(());
+        };
+
+        let symbol_strings: Vec<String> = previous
+            .symbols
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
+
+        if symbol_strings.is_empty() {
+            return Ok(());
+        }
+
+        crate::openapi::helpers::unsubscribe_quotes(&symbol_strings, previous.sub_flags).await
     }
 
     pub async fn remount(
         &self,
-        _name: &str,
+        name: &str,
         symbols: &[Counter],
-        _sub_type: SubTypes,
+        sub_type: SubTypes,
     ) -> anyhow::Result<()> {
-        // TODO: Use longport SDK to resubscribe
-        let symbol_strings: Vec<String> = symbols
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-        let _ = crate::openapi::helpers::subscribe_quotes(
-            &symbol_strings,
-            longport::quote::SubFlags::QUOTE,
-        )
-        .await;
-        Ok(())
+        let sub_flags = Self::sub_flags_from_type(sub_type);
+        self.subscribe(name, symbols, sub_flags).await
     }
 
-    pub async fn quote_detail(&self, _name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
-        let symbol_strings: Vec<String> = symbols
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-        let _ = crate::openapi::helpers::subscribe_quotes(
-            &symbol_strings,
+    pub async fn quote_detail(&self, name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
+        self.subscribe(
+            name,
+            symbols,
             longport::quote::SubFlags::QUOTE | longport::quote::SubFlags::DEPTH,
         )
-        .await;
-        Ok(())
+        .await
     }
 
-    pub async fn quote_trade(&self, _name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
-        let symbol_strings: Vec<String> = symbols
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-        let _ = crate::openapi::helpers::subscribe_quotes(
-            &symbol_strings,
-            longport::quote::SubFlags::TRADE,
-        )
-        .await;
-        Ok(())
+    pub async fn quote_trade(&self, name: &str, symbols: &[Counter]) -> anyhow::Result<()> {
+        self.subscribe(name, symbols, longport::quote::SubFlags::TRADE)
+            .await
     }
 }
 
-pub static WS: std::sync::LazyLock<WsManager> = std::sync::LazyLock::new(|| WsManager);
+pub static WS: std::sync::LazyLock<WsManager> = std::sync::LazyLock::new(WsManager::new);
+
+#[cfg(test)]
+mod ws_manager_tests {
+    use super::{Counter, SubTypes, WsManager};
+
+    #[test]
+    fn deduplicates_symbols_while_preserving_order() {
+        let symbols = vec![
+            Counter::new("AAPL.US"),
+            Counter::new("AAPL.US"),
+            Counter::new("TSLA.US"),
+        ];
+
+        let deduped = WsManager::normalize_symbols(&symbols);
+        assert_eq!(deduped.len(), 2);
+        assert_eq!(deduped[0].as_str(), "AAPL.US");
+        assert_eq!(deduped[1].as_str(), "TSLA.US");
+    }
+
+    #[test]
+    fn maps_sub_type_to_expected_flags() {
+        let list = WsManager::sub_flags_from_type(SubTypes::LIST);
+        assert!(list.contains(longport::quote::SubFlags::QUOTE));
+
+        let detail = WsManager::sub_flags_from_type(SubTypes::DETAIL);
+        assert!(detail.contains(longport::quote::SubFlags::QUOTE));
+        assert!(detail.contains(longport::quote::SubFlags::DEPTH));
+
+        let depth = WsManager::sub_flags_from_type(SubTypes::DEPTH);
+        assert!(depth.contains(longport::quote::SubFlags::DEPTH));
+        assert!(!depth.contains(longport::quote::SubFlags::QUOTE));
+
+        let trades = WsManager::sub_flags_from_type(SubTypes::TRADES);
+        assert!(trades.contains(longport::quote::SubFlags::TRADE));
+    }
+}
 
 // Debounce state for stock refresh
 static REFRESH_STOCK_TASK: std::sync::LazyLock<Mutex<Option<JoinHandle<()>>>> =
@@ -465,7 +588,9 @@ pub fn enter_watchlist_common(command: Res<Command>) {
 
 pub fn exit_watchlist_common() {
     RT.get().unwrap().spawn(async move {
-        _ = WS.unmount("watchlist").await;
+        if let Err(err) = WS.unmount("watchlist").await {
+            tracing::warn!(error = %err, "取消自选订阅失败");
+        }
     });
 }
 
@@ -554,7 +679,9 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
         }
 
         // SignalApp removed
-        let _ = WS.remount("watchlist", &counters, SubTypes::LIST).await;
+        if let Err(err) = WS.remount("watchlist", &counters, SubTypes::LIST).await {
+            tracing::error!(error = %err, "重建自选订阅失败");
+        }
 
         // refresh watchlist sort
         WATCHLIST.write().expect("poison").refresh();
@@ -579,12 +706,18 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
 pub fn refresh_stock(counter: Counter) {
     RT.get().unwrap().spawn(async move {
         KLINES.clear();
-        let _ = WS
+        if let Err(err) = WS
             .quote_detail("stock_detail", std::slice::from_ref(&counter))
-            .await;
-        let _ = WS
+            .await
+        {
+            tracing::warn!(symbol = %counter, error = %err, "订阅盘口行情失败");
+        }
+        if let Err(err) = WS
             .quote_trade("stock_detail", std::slice::from_ref(&counter))
-            .await;
+            .await
+        {
+            tracing::warn!(symbol = %counter, error = %err, "订阅逐笔成交失败");
+        }
 
         // Get full quote data (including prev_close and trade_status)
         if let Ok(quotes) = crate::openapi::helpers::get_quotes([counter.to_string()]).await {
@@ -646,12 +779,18 @@ pub fn refresh_stock_debounced(counter: Counter) {
 
             // Execute the actual refresh
             KLINES.clear();
-            let _ = WS
+            if let Err(err) = WS
                 .quote_detail("stock_detail", std::slice::from_ref(&counter))
-                .await;
-            let _ = WS
+                .await
+            {
+                tracing::warn!(symbol = %counter, error = %err, "订阅盘口行情失败");
+            }
+            if let Err(err) = WS
                 .quote_trade("stock_detail", std::slice::from_ref(&counter))
-                .await;
+                .await
+            {
+                tracing::warn!(symbol = %counter, error = %err, "订阅逐笔成交失败");
+            }
 
             // Get full quote data (including prev_close and trade_status)
             if let Ok(quotes) = crate::openapi::helpers::get_quotes([counter.to_string()]).await {
@@ -703,7 +842,9 @@ pub fn enter_stock(counter: Res<StockDetail>) {
 pub fn exit_stock() {
     KLINES.clear();
     RT.get().unwrap().spawn(async move {
-        _ = WS.unmount("stock_detail").await;
+        if let Err(err) = WS.unmount("stock_detail").await {
+            tracing::warn!(error = %err, "取消个股详情订阅失败");
+        }
     });
 }
 

@@ -11,6 +11,9 @@ where
 {
     let ctx = quote_limited();
     let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
+    if symbols.is_empty() {
+        return Ok(());
+    }
     let symbols_str = symbols.join(",");
 
     ctx.execute(&format!("subscribe({symbols_str})"), || {
@@ -37,6 +40,9 @@ where
 {
     let ctx = quote_limited();
     let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
+    if symbols.is_empty() {
+        return Ok(());
+    }
     let symbols_str = symbols.join(",");
 
     ctx.execute(&format!("unsubscribe({symbols_str})"), || {
@@ -60,6 +66,9 @@ where
 {
     let ctx = quote_limited();
     let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
+    if symbols.is_empty() {
+        return Ok(vec![]);
+    }
     let symbols_str = symbols.join(",");
 
     ctx.execute(&format!("quote({symbols_str})"), || {
@@ -78,6 +87,9 @@ where
 {
     let ctx = quote_limited();
     let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
+    if symbols.is_empty() {
+        return Ok(vec![]);
+    }
     let symbols_str = symbols.join(",");
 
     ctx.execute(&format!("static_info({symbols_str})"), || {
