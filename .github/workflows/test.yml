@@ -26,8 +26,11 @@ jobs:
           key: ubuntu-test-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: 检查格式
         run: cargo fmt --all -- --check
-      - name: 检查安装脚本语法
-        run: sh -n install
+      - name: 检查脚本语法
+        run: |
+          sh -n install
+          sh -n scripts/release_preflight.sh
+          sh -n scripts/log_alert_guard.sh
       - name: 静态分析 Clippy
         run: cargo clippy -- -D warnings
       - name: 测试
