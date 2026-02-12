@@ -186,21 +186,26 @@ pub async fn fetch_stock_holdings() -> Result<Vec<Holding>> {
 
     // Fetch real-time quotes for all holdings
     if !symbols.is_empty() {
-        if let Ok(quotes) = openapi::helpers::get_quotes(&symbols).await {
-            // Create a map for quick lookup
-            let mut quote_map: std::collections::HashMap<String, rust_decimal::Decimal> =
-                std::collections::HashMap::new();
+        match openapi::helpers::get_quotes(&symbols).await {
+            Ok(quotes) => {
+                // Create a map for quick lookup
+                let mut quote_map: std::collections::HashMap<String, rust_decimal::Decimal> =
+                    std::collections::HashMap::new();
 
-            for quote in quotes {
-                quote_map.insert(quote.symbol.clone(), quote.last_done);
-            }
-
-            // Update market prices and market values with real-time data
-            for holding in &mut holdings {
-                if let Some(&real_price) = quote_map.get(&holding.symbol) {
-                    holding.market_price = real_price;
-                    holding.market_value = real_price * holding.quantity;
+                for quote in quotes {
+                    quote_map.insert(quote.symbol.clone(), quote.last_done);
                 }
+
+                // Update market prices and market values with real-time data
+                for holding in &mut holdings {
+                    if let Some(&real_price) = quote_map.get(&holding.symbol) {
+                        holding.market_price = real_price;
+                        holding.market_value = real_price * holding.quantity;
+                    }
+                }
+            }
+            Err(err) => {
+                tracing::warn!(error = %err, "拉取持仓实时行情失败，回退到成本价估算");
             }
         }
     }

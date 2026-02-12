@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 /// Stock identifier (simplified)
-/// Format: market.code (e.g., HK.00700)
+/// Format: code.market (e.g., 00700.HK / AAPL.US)
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Counter {
     inner: String,
@@ -20,11 +20,15 @@ impl Counter {
     }
 
     pub fn code(&self) -> &str {
-        self.as_str().split('.').nth(0).unwrap_or("")
+        self.as_str()
+            .rsplit_once('.')
+            .map_or(self.as_str(), |(code, _)| code)
     }
 
     pub fn market(&self) -> &str {
-        self.as_str().split('.').nth(1).unwrap_or("")
+        self.as_str()
+            .rsplit_once('.')
+            .map_or("", |(_, market)| market)
     }
 
     /// Get region/market
@@ -589,5 +593,31 @@ impl Default for TradeData {
             trade_type: String::new(),
             direction: TradeDirection::Neutral,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Counter;
+
+    #[test]
+    fn parses_standard_symbol() {
+        let counter = Counter::new("AAPL.US");
+        assert_eq!(counter.code(), "AAPL");
+        assert_eq!(counter.market(), "US");
+    }
+
+    #[test]
+    fn parses_index_symbol_with_leading_dot() {
+        let counter = Counter::new(".DJI.US");
+        assert_eq!(counter.code(), ".DJI");
+        assert_eq!(counter.market(), "US");
+    }
+
+    #[test]
+    fn handles_symbol_without_market_suffix() {
+        let counter = Counter::new("BTCUSD");
+        assert_eq!(counter.code(), "BTCUSD");
+        assert_eq!(counter.market(), "");
     }
 }
