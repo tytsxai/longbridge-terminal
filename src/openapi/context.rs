@@ -130,7 +130,9 @@ pub fn print_config_guide() {
     eprintln!("可选：通过 LONGPORT_HTTP_URL 与 LONGPORT_QUOTE_WS_URL 指定自定义服务地址");
     eprintln!("可选：通过 CHANGQIAO_LOCALE 指定界面语言（如 zh-CN / en）");
     eprintln!("可选：通过 CHANGQIAO_LOG 调整日志过滤（如 error,changqiao=info）");
+    eprintln!("可选：通过 CHANGQIAO_LOG_DIR / CHANGQIAO_DATA_DIR 覆盖日志与状态目录");
     eprintln!("兼容旧变量：LONGBRIDGE_LOCALE / LONGBRIDGE_LOG");
+    eprintln!("兼容旧变量：LONGBRIDGE_LOG_DIR / LONGBRIDGE_DATA_DIR");
     eprintln!();
     eprintln!("获取 Token: https://open.longbridge.com");
     eprintln!();

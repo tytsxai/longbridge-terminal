@@ -5,6 +5,13 @@ pub struct InstanceGuard {
 }
 
 pub fn lock_file_path() -> PathBuf {
+    if let Some(mut path) =
+        crate::path_env::dir_override("CHANGQIAO_DATA_DIR", "LONGBRIDGE_DATA_DIR")
+    {
+        path.push("changqiao.lock");
+        return path;
+    }
+
     #[cfg(target_os = "macos")]
     {
         let mut path = dirs::home_dir().unwrap_or_else(std::env::temp_dir);

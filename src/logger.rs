@@ -6,6 +6,10 @@ use std::sync::OnceLock;
 static ACTIVE_LOG_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn default_log_dir() -> PathBuf {
+    if let Some(path) = crate::path_env::dir_override("CHANGQIAO_LOG_DIR", "LONGBRIDGE_LOG_DIR") {
+        return path;
+    }
+
     #[cfg(target_os = "macos")]
     {
         let mut path = dirs::home_dir()

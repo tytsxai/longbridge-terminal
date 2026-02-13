@@ -98,6 +98,13 @@ impl Default for AlertStore {
 
 #[must_use]
 pub fn alert_store_path() -> PathBuf {
+    if let Some(mut path) =
+        crate::path_env::dir_override("CHANGQIAO_DATA_DIR", "LONGBRIDGE_DATA_DIR")
+    {
+        path.push("alerts.json");
+        return path;
+    }
+
     #[cfg(target_os = "macos")]
     {
         let mut path = dirs::home_dir()
