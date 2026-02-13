@@ -44,6 +44,99 @@ pub enum AppState {
     WatchlistStock,
 }
 
+fn app_state_to_str(state: AppState) -> &'static str {
+    match state {
+        AppState::Error => "error",
+        AppState::Loading => "loading",
+        AppState::TradeToken => "trade_token",
+        AppState::Portfolio => "portfolio",
+        AppState::Stock => "stock",
+        AppState::Watchlist => "watchlist",
+        AppState::WatchlistStock => "watchlist_stock",
+    }
+}
+
+fn app_state_from_str(raw: &str) -> Option<AppState> {
+    match raw {
+        "error" => Some(AppState::Error),
+        "loading" => Some(AppState::Loading),
+        "trade_token" => Some(AppState::TradeToken),
+        "portfolio" => Some(AppState::Portfolio),
+        "stock" => Some(AppState::Stock),
+        "watchlist" => Some(AppState::Watchlist),
+        "watchlist_stock" => Some(AppState::WatchlistStock),
+        _ => None,
+    }
+}
+
+fn persist_workspace_snapshot(app: &bevy_app::App) {
+    let (selected_counter, watchlist_group_id, watchlist_sort_by, watchlist_hidden) = {
+        let selected_idx = crate::system::WATCHLIST_TABLE
+            .lock()
+            .expect("poison")
+            .selected();
+        let selected = {
+            let watchlist = WATCHLIST.read().expect("poison");
+            selected_idx.and_then(|i| watchlist.counters().get(i).cloned())
+        };
+        let watchlist = WATCHLIST.read().expect("poison");
+        (
+            selected,
+            watchlist.group_id,
+            watchlist.sort_by,
+            watchlist.hidden,
+        )
+    };
+
+    let current_state = app
+        .world
+        .get_resource::<State<AppState>>()
+        .map(|state| *state.get());
+    let stock_detail_counter = app
+        .world
+        .get_resource::<crate::system::StockDetail>()
+        .map(|detail| detail.0.clone());
+
+    let mut snapshot = crate::workspace::WorkspaceSnapshot::empty_now();
+    snapshot.last_state = current_state.map(app_state_to_str).map(str::to_string);
+    snapshot.watchlist_group_id = watchlist_group_id;
+    snapshot.watchlist_sort_by = watchlist_sort_by;
+    snapshot.watchlist_hidden = watchlist_hidden;
+    snapshot.selected_counter = selected_counter;
+    snapshot.stock_detail_counter = stock_detail_counter;
+    snapshot.kline_type = crate::system::KLINE_TYPE.load(Ordering::Relaxed);
+    snapshot.kline_index = crate::system::KLINE_INDEX.load(Ordering::Relaxed);
+    snapshot.log_panel_visible = LOG_PANEL_VISIBLE.load(Ordering::Relaxed);
+
+    if let Err(err) = crate::workspace::save(&snapshot) {
+        tracing::warn!(error = %err, "保存工作区快照失败");
+    }
+}
+
+pub fn persist_workspace_fallback() {
+    let selected_idx = crate::system::WATCHLIST_TABLE
+        .lock()
+        .expect("poison")
+        .selected();
+    let selected_counter = {
+        let watchlist = WATCHLIST.read().expect("poison");
+        selected_idx.and_then(|i| watchlist.counters().get(i).cloned())
+    };
+    let watchlist = WATCHLIST.read().expect("poison");
+    let mut snapshot = crate::workspace::WorkspaceSnapshot::empty_now();
+    snapshot.last_state = Some(app_state_to_str(LAST_STATE.load(Ordering::Relaxed)).to_string());
+    snapshot.watchlist_group_id = watchlist.group_id;
+    snapshot.watchlist_sort_by = watchlist.sort_by;
+    snapshot.watchlist_hidden = watchlist.hidden;
+    snapshot.selected_counter = selected_counter;
+    snapshot.kline_type = crate::system::KLINE_TYPE.load(Ordering::Relaxed);
+    snapshot.kline_index = crate::system::KLINE_INDEX.load(Ordering::Relaxed);
+    snapshot.log_panel_visible = LOG_PANEL_VISIBLE.load(Ordering::Relaxed);
+    if let Err(err) = crate::workspace::save(&snapshot) {
+        tracing::warn!(error = %err, "保存工作区兜底快照失败");
+    }
+}
+
 fn is_log_file_name(name: &str) -> bool {
     (name.starts_with("changqiao") || name.starts_with("longbridge"))
         && std::path::Path::new(name)
@@ -87,6 +180,33 @@ pub async fn run(
     mut quote_receiver: impl tokio_stream::Stream<Item = longport::quote::PushEvent> + Unpin,
 ) {
     let (update_tx, mut update_rx) = mpsc::unbounded_channel();
+
+    let startup_workspace = crate::workspace::load().unwrap_or_else(|| {
+        tracing::debug!("未检测到工作区快照，使用默认运行状态");
+        crate::workspace::WorkspaceSnapshot::empty_now()
+    });
+
+    {
+        let mut watchlist = WATCHLIST.write().expect("poison");
+        watchlist.group_id = startup_workspace.watchlist_group_id;
+        watchlist.set_sortby(startup_workspace.watchlist_sort_by);
+        watchlist.set_hidden(startup_workspace.watchlist_hidden);
+    }
+    LOG_PANEL_VISIBLE.store(startup_workspace.log_panel_visible, Ordering::Relaxed);
+    crate::system::KLINE_TYPE.store(startup_workspace.kline_type, Ordering::Relaxed);
+    crate::system::KLINE_INDEX.store(startup_workspace.kline_index, Ordering::Relaxed);
+    crate::workspace::set_startup_selected_counter(startup_workspace.selected_counter.clone());
+
+    if let Err(err) = crate::alerts::load_from_disk() {
+        tracing::warn!(error = %err, "加载预警规则失败，将继续使用空规则集合");
+    } else {
+        let count = crate::alerts::ALERT_STORE
+            .read()
+            .expect("poison")
+            .rules
+            .len();
+        tracing::info!(count, "预警规则加载完成");
+    }
 
     // Initialize index subscriptions
     let indexes: Vec<[Counter; 3]> = vec![
@@ -170,7 +290,9 @@ pub async fn run(
     });
     let search_watchlist = LocalSearch::new(Vec::<WatchlistGroup>::new(), |_keyword, _group| false);
 
-    RT.set(tokio::runtime::Handle::current()).unwrap();
+    if RT.set(tokio::runtime::Handle::current()).is_err() {
+        tracing::debug!("运行时句柄已初始化，复用已存在句柄");
+    }
     let mut app = bevy_app::App::new();
     app.add_state::<AppState>()
         .add_event::<system::Key>()
@@ -229,9 +351,17 @@ pub async fn run(
     // We need to re-acquire the receiver or pass it from main.rs
     // Skip WebSocket handling for now, focus on getting code to compile
 
+    let restored_state = startup_workspace
+        .last_state
+        .as_deref()
+        .and_then(app_state_from_str)
+        .unwrap_or(AppState::Watchlist);
+    let restored_stock_detail = startup_workspace.stock_detail_counter.clone();
+
     // Initialize account information
     tokio::spawn({
         let tx = update_tx.clone();
+        let restored_stock_detail = restored_stock_detail.clone();
         async move {
             tracing::info!("正在获取账户列表...");
             match crate::api::account::fetch_account_list().await {
@@ -290,8 +420,38 @@ pub async fn run(
                         });
                     }
 
+                    let next_state = match restored_state {
+                        AppState::Watchlist
+                        | AppState::WatchlistStock
+                        | AppState::Stock
+                        | AppState::Portfolio => restored_state,
+                        _ => AppState::Watchlist,
+                    };
+
+                    // Portfolio 页面要求 Portfolio 资源先就绪，这里优先回退到 Watchlist
+                    let next_state = if next_state == AppState::Portfolio {
+                        AppState::Watchlist
+                    } else {
+                        next_state
+                    };
+
+                    let next_state =
+                        if matches!(next_state, AppState::Stock | AppState::WatchlistStock)
+                            && restored_stock_detail.is_none()
+                        {
+                            AppState::Watchlist
+                        } else {
+                            next_state
+                        };
+
+                    if let Some(counter) = restored_stock_detail.clone() {
+                        queue.push(InsertResource {
+                            resource: crate::system::StockDetail(counter),
+                        });
+                    }
+
                     queue.push(InsertResource {
-                        resource: NextState(Some(AppState::Watchlist)),
+                        resource: NextState(Some(next_state)),
                     });
                     _ = tx.send(queue);
 
@@ -408,6 +568,9 @@ pub async fn run(
                              // Use update_from_push_quote to update all fields including trade_session
                              stock.update_from_push_quote(&quote);
                          });
+                         if let Some(stock) = crate::data::STOCKS.get(&counter) {
+                             crate::alerts::evaluate_quote(&symbol, stock.as_ref());
+                         }
                          // Quote updates affect watchlist, stock detail, and indexes
                          render_state.mark_dirty(DirtyFlags::NONE.mark_quote_update());
                      }
@@ -479,16 +642,23 @@ pub async fn run(
 
                 // Handle input for different states
                 match state {
-                    AppState::Error => return,
+                    AppState::Error => {
+                        persist_workspace_snapshot(&app);
+                        return;
+                    }
                     AppState::Loading => {
                         if matches!(event, ctrl!('c') | key!('q')) {
+                            persist_workspace_snapshot(&app);
                             return;
                         }
                         continue;
                     },
                     AppState::TradeToken => {
                         match event {
-                            ctrl!('c') => return,
+                            ctrl!('c') => {
+                                persist_workspace_snapshot(&app);
+                                return;
+                            }
                             key!(Esc) => {
                                 app.world.insert_resource(NextState(Some(LAST_STATE.load(Ordering::Relaxed))));
                                 render_state.mark_dirty(DirtyFlags::ALL);
@@ -507,7 +677,16 @@ pub async fn run(
                 }
 
                 // Handle global keyboard shortcuts
-                handle_global_keys(&mut app, event, state, update_tx.clone(), &mut render_state);
+                if handle_global_keys(
+                    &mut app,
+                    event,
+                    state,
+                    update_tx.clone(),
+                    &mut render_state,
+                ) {
+                    persist_workspace_snapshot(&app);
+                    return;
+                }
             }
         }
     }
@@ -591,9 +770,9 @@ fn handle_global_keys(
     state: AppState,
     update_tx: mpsc::UnboundedSender<CommandQueue>,
     render_state: &mut RenderState,
-) {
+) -> bool {
     match event {
-        ctrl!('c') => crate::widgets::Terminal::graceful_exit(0),
+        ctrl!('c') => return true,
         key!('1') if state != AppState::Watchlist => {
             app.world
                 .insert_resource(NextState(Some(AppState::Watchlist)));
@@ -854,6 +1033,7 @@ fn handle_global_keys(
         }
         _ => (),
     }
+    false
 }
 
 fn send_evt<T: Event>(evt: T, world: &mut World) {

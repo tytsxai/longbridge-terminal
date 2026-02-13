@@ -4,10 +4,12 @@ use std::io::{IsTerminal, Write};
 #[macro_use]
 mod macros;
 
+pub mod alerts;
 pub mod api;
 pub mod app;
 pub mod cli;
 pub mod data;
+pub mod doctor;
 pub mod helper;
 pub mod instance_lock;
 pub mod kline;
@@ -20,6 +22,7 @@ pub mod render;
 pub mod system;
 pub mod ui;
 pub mod widgets;
+pub mod workspace;
 
 mod views;
 
@@ -51,6 +54,10 @@ async fn main() {
         cli::Command::Version => {
             println!("{}", cli::version_text());
             return;
+        }
+        cli::Command::Doctor => {
+            dotenvy::dotenv().ok();
+            std::process::exit(doctor::run());
         }
         cli::Command::Run(args) => args,
     };
@@ -132,6 +139,7 @@ async fn main() {
             tracing::warn!("收到退出信号，正在退出");
         }
     }
+    app::persist_workspace_fallback();
     Terminal::exit_full_screen();
 }
 

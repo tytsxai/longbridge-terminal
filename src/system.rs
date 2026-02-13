@@ -1,5 +1,7 @@
 #![allow(clippy::too_many_arguments, clippy::too_many_lines)]
-use std::{collections::HashMap, sync::atomic::Ordering, sync::Mutex, time::Duration};
+use std::{
+    collections::HashMap, future::Future, sync::atomic::Ordering, sync::Mutex, time::Duration,
+};
 
 use atomic::Atomic;
 use bevy_ecs::{
@@ -483,6 +485,17 @@ impl Drop for RefreshGuard {
     }
 }
 
+fn spawn_runtime_task(
+    task_name: &'static str,
+    future: impl Future<Output = ()> + Send + 'static,
+) -> Option<JoinHandle<()>> {
+    let Some(runtime) = RT.get() else {
+        tracing::error!(task = task_name, "运行时未初始化，任务已跳过");
+        return None;
+    };
+    Some(runtime.spawn(future))
+}
+
 // Other stub types
 #[derive(Clone, Debug, Default)]
 pub struct DepthView {
@@ -587,7 +600,7 @@ pub fn enter_watchlist_common(command: Res<Command>) {
 }
 
 pub fn exit_watchlist_common() {
-    RT.get().unwrap().spawn(async move {
+    let _ = spawn_runtime_task("exit_watchlist_common", async move {
         if let Err(err) = WS.unmount("watchlist").await {
             tracing::warn!(error = %err, "取消自选订阅失败");
         }
@@ -595,7 +608,14 @@ pub fn exit_watchlist_common() {
 }
 
 pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
-    RT.get().unwrap().spawn(async move {
+    let _ = spawn_runtime_task("refresh_watchlist", async move {
+        let previous_selected_idx = WATCHLIST_TABLE.lock().expect("poison").selected();
+        let previous_selected_counter = {
+            let watchlist = WATCHLIST.read().expect("poison");
+            previous_selected_idx.and_then(|idx| watchlist.counters().get(idx).cloned())
+        };
+        let startup_selected_counter = crate::workspace::take_startup_selected_counter();
+
         let group_id = WATCHLIST.read().expect("poison").group_id;
         let (watch_resp, holdings) = tokio::join!(fetch_watchlist(group_id), fetch_holdings());
         match watch_resp {
@@ -614,13 +634,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
             }
         }
 
-        let counters = {
-            // Simplified implementation: use default sorting
-            let mut watchlist = WATCHLIST.write().expect("poison");
-            watchlist.set_hidden(true);
-            watchlist.set_sortby((0, 0, false)); // (sort_mode, sort_by, reverse)
-            watchlist.counters().to_vec()
-        };
+        let counters = WATCHLIST.read().expect("poison").counters().to_vec();
 
         // Create Stock entry for each watchlist item (if not exists)
         for counter in &counters {
@@ -678,15 +692,22 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
             }
         }
 
-        // SignalApp removed
-        if let Err(err) = WS.remount("watchlist", &counters, SubTypes::LIST).await {
-            tracing::error!(error = %err, "重建自选订阅失败");
-        }
-
         // refresh watchlist sort
         WATCHLIST.write().expect("poison").refresh();
-        // counter order maybe change, reset table highlight
-        WATCHLIST_TABLE.lock().expect("poison").select(None);
+        let sorted_counters = WATCHLIST.read().expect("poison").counters().to_vec();
+        let preferred_counter = startup_selected_counter.or(previous_selected_counter);
+        let selected_idx = preferred_counter
+            .and_then(|counter| sorted_counters.iter().position(|c| c == &counter))
+            .or_else(|| (!sorted_counters.is_empty()).then_some(0));
+        WATCHLIST_TABLE.lock().expect("poison").select(selected_idx);
+
+        // SignalApp removed
+        if let Err(err) = WS
+            .remount("watchlist", &sorted_counters, SubTypes::LIST)
+            .await
+        {
+            tracing::error!(error = %err, "重建自选订阅失败");
+        }
 
         let local_search = LocalSearch::new(
             WATCHLIST.read().expect("poison").groups().to_vec(),
@@ -704,7 +725,7 @@ pub fn refresh_watchlist(update_tx: mpsc::UnboundedSender<CommandQueue>) {
 }
 
 pub fn refresh_stock(counter: Counter) {
-    RT.get().unwrap().spawn(async move {
+    let _ = spawn_runtime_task("refresh_stock", async move {
         KLINES.clear();
         if let Err(err) = WS
             .quote_detail("stock_detail", std::slice::from_ref(&counter))
@@ -765,7 +786,7 @@ pub fn refresh_stock_debounced(counter: Counter) {
         }
 
         // Spawn a new debounced task
-        let handle = RT.get().unwrap().spawn(async move {
+        let Some(handle) = spawn_runtime_task("refresh_stock_debounced", async move {
             // Wait 50ms before executing
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
@@ -829,7 +850,9 @@ pub fn refresh_stock_debounced(counter: Counter) {
             tracing::debug!("完成刷新 {}", counter);
 
             // The _guard will be dropped here, automatically clearing REFRESH_EXECUTING
-        });
+        }) else {
+            return;
+        };
 
         *task_guard = Some(handle);
     }
@@ -841,7 +864,7 @@ pub fn enter_stock(counter: Res<StockDetail>) {
 
 pub fn exit_stock() {
     KLINES.clear();
-    RT.get().unwrap().spawn(async move {
+    let _ = spawn_runtime_task("exit_stock", async move {
         if let Err(err) = WS.unmount("stock_detail").await {
             tracing::warn!(error = %err, "取消个股详情订阅失败");
         }
@@ -863,7 +886,7 @@ pub fn refresh_portfolio() {
         return;
     }
 
-    RT.get().unwrap().spawn(async move {
+    let _ = spawn_runtime_task("refresh_portfolio", async move {
         struct RefreshFlagGuard;
 
         impl Drop for RefreshFlagGuard {

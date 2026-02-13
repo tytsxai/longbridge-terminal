@@ -6,6 +6,7 @@ pub struct Args {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Command {
     Run(Args),
+    Doctor,
     Help,
     Version,
 }
@@ -19,7 +20,7 @@ pub struct ParseError {
 #[must_use]
 pub fn help_text(bin_name: &str) -> String {
     format!(
-        "长桥终端\n\n用法：\n  {bin_name} [选项]\n\n选项：\n  -h, --help       显示帮助信息\n  -V, --version    显示版本信息\n      --logout     清理本地登录状态（预留）\n"
+        "长桥终端\n\n用法：\n  {bin_name} [选项]\n  {bin_name} doctor\n\n选项：\n  -h, --help       显示帮助信息\n  -V, --version    显示版本信息\n      --doctor     运行环境诊断并退出（等同于 doctor）\n      --logout     清理本地登录状态（预留）\n"
     )
 }
 
@@ -36,12 +37,14 @@ where
     let mut parsed = Args::default();
     let mut show_help = false;
     let mut show_version = false;
+    let mut run_doctor = false;
 
     for raw in args {
         let arg = raw.into();
         match arg.as_str() {
             "-h" | "--help" => show_help = true,
             "-V" | "--version" => show_version = true,
+            "--doctor" | "doctor" => run_doctor = true,
             "--logout" => parsed.logout = true,
             _ if arg.starts_with('-') => {
                 return Err(ParseError {
@@ -66,6 +69,20 @@ where
         return Ok(Command::Version);
     }
 
+    if run_doctor {
+        if parsed.logout {
+            return Err(ParseError {
+                code: 2,
+                message: format!(
+                    "诊断模式不支持参数：{}\n\n{}",
+                    "--logout",
+                    help_text("changqiao")
+                ),
+            });
+        }
+        return Ok(Command::Doctor);
+    }
+
     Ok(Command::Run(parsed))
 }
 
@@ -83,6 +100,18 @@ mod tests {
     fn parses_help_command() {
         let result = parse_args(["--help"]);
         assert_eq!(result, Ok(Command::Help));
+    }
+
+    #[test]
+    fn parses_doctor_command() {
+        let result = parse_args(["doctor"]);
+        assert_eq!(result, Ok(Command::Doctor));
+    }
+
+    #[test]
+    fn parses_doctor_option() {
+        let result = parse_args(["--doctor"]);
+        assert_eq!(result, Ok(Command::Doctor));
     }
 
     #[test]
@@ -114,5 +143,13 @@ mod tests {
         let err = result.expect_err("expected parse error");
         assert_eq!(err.code, 2);
         assert!(err.message.contains("不支持的位置参数"));
+    }
+
+    #[test]
+    fn fails_when_doctor_combined_with_logout() {
+        let result = parse_args(["doctor", "--logout"]);
+        let err = result.expect_err("expected parse error");
+        assert_eq!(err.code, 2);
+        assert!(err.message.contains("诊断模式不支持参数：--logout"));
     }
 }

@@ -13,6 +13,29 @@ pub struct KlineStore {
 }
 
 impl KlineStore {
+    fn request_in_background(
+        counter: Counter,
+        kline_type: KlineType,
+        adjust_type: AdjustType,
+        before: i64,
+        count: usize,
+    ) {
+        let Some(runtime) = crate::app::RT.get() else {
+            tracing::warn!(
+                symbol = %counter,
+                "运行时未初始化，已跳过 K 线后台请求"
+            );
+            return;
+        };
+        runtime.spawn(Self::request(
+            counter,
+            kline_type,
+            adjust_type,
+            before,
+            count,
+        ));
+    }
+
     fn new() -> Self {
         Self {
             inner: RwLock::default(),
@@ -33,13 +56,13 @@ impl KlineStore {
             kline_type,
             Self::normalize(kline_type).unwrap_or(adjust_type),
         )) else {
-            crate::app::RT.get().unwrap().spawn(Self::request(
+            Self::request_in_background(
                 counter,
                 kline_type,
                 adjust_type,
                 0,
                 (page + 1) * page_size,
-            ));
+            );
             return Klines::default();
         };
 
@@ -52,13 +75,13 @@ impl KlineStore {
         };
 
         if *has_more && results.len() < page_size {
-            crate::app::RT.get().unwrap().spawn(Self::request(
+            Self::request_in_background(
                 counter,
                 kline_type,
                 adjust_type,
                 entries.first().map(|e| e.timestamp).unwrap_or_default(),
                 page_size,
-            ));
+            );
         }
 
         // Fix forward adjust
