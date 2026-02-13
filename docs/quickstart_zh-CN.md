@@ -1,22 +1,29 @@
-# 5 分钟快速上手（中文）
+# 快速上手（实用版）
 
-> 目标：第一次使用本项目的同学，可以在 5 分钟内跑起来并看见实时数据。
-
-## 0. 准备条件
-
-- macOS 或 Linux
-- 可访问外网（至少可访问 GitHub 与长桥 OpenAPI）
-- 已申请 Longport OpenAPI 凭证
+> 目标：第一次使用时，10 分钟内完成“安装 → 诊断 → 启动 → 会用”。
 
 ---
 
-## 1. 安装
+## 1. 最短路径（复制即可）
 
 ```bash
+# 1) 安装
 curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | sh
+
+# 2) 准备配置
+cp .env.example .env
+# 编辑 .env，填入 LONGPORT_APP_KEY / LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN
+
+# 3) 先诊断后启动
+changqiao doctor
+changqiao
 ```
 
-安装成功后，先做基本检查：
+如果第 3 步里 `doctor` 出现 `FAIL`，先解决再启动。
+
+---
+
+## 2. 安装后先确认三件事
 
 ```bash
 changqiao --version
@@ -24,19 +31,15 @@ changqiao --help
 changqiao doctor
 ```
 
-> 安装脚本兼容新旧发布产物：优先下载 `changqiao-terminal`，不存在时自动回退到 `longbridge-terminal`。
+你需要看到：
+
+1. `--version` 能输出版本号
+2. `--help` 能显示命令
+3. `doctor` 没有阻塞项（`FAIL`）
 
 ---
 
-## 2. 配置凭证
-
-在项目目录创建 `.env`：
-
-```bash
-cp .env.example .env
-```
-
-填写以下必需项：
+## 3. `.env` 最小配置
 
 ```bash
 LONGPORT_APP_KEY=your_app_key
@@ -44,79 +47,56 @@ LONGPORT_APP_SECRET=your_app_secret
 LONGPORT_ACCESS_TOKEN=your_access_token
 ```
 
-可选项：
+常用可选项：
 
 ```bash
 CHANGQIAO_LOCALE=zh-CN
 CHANGQIAO_LOG=error,changqiao=info
 ```
 
-建议在首次启动前做一次诊断：
+---
 
-```bash
-changqiao doctor
-```
+## 4. `doctor` 输出怎么读
 
-若 `doctor` 输出 `FAIL`，请先修复后再启动。
+- `PASS`：通过
+- `WARN`：可运行，但建议修复
+- `FAIL`：阻塞项，通常会导致主程序无法启动
+
+高频问题：
+
+1. 缺少环境变量：回到 `.env` 检查三项凭证
+2. stdout 不是 TTY：不要在重定向/非交互 shell 中启动
+3. DNS 失败：先确认网络与代理
+4. 单实例锁冲突：确认是否已有 changqiao 进程在运行
 
 ---
 
-## 3. 启动与首屏确认
+## 5. 首次启动后先学的 6 个键
 
-```bash
-changqiao
-```
+- `?`：打开帮助
+- `/`：搜索股票
+- `Enter`：进入当前项详情
+- `R`：刷新
+- `` ` ``：日志面板
+- `q` / `ESC`：返回
 
-正常情况下你应看到：
-
-1. 程序进入全屏终端 UI
-2. 自选或行情区域开始刷新
-3. 底部显示可用快捷键提示
-
-若启动报错，请直接看：[FAQ](faq_zh-CN.md)
+退出：`Ctrl+C`
 
 ---
 
-## 4. 5 个最常用操作
+## 6. 本地文件位置（排障常用）
 
-1. `?`：查看完整帮助
-2. `/`：搜索股票
-3. `Enter`：进入当前选择的详情
-4. `R`：手动刷新数据
-5. `` ` ``：打开日志面板
+### macOS
 
-退出相关：
+- 日志：`~/Library/Logs/ChangQiao/`
+- 工作区：`~/Library/Application Support/ChangQiao/workspace.json`
+- 预警规则：`~/Library/Application Support/ChangQiao/alerts.json`
 
-- `q` / `ESC`：返回上层/关闭弹窗
-- `Ctrl+C`：退出程序
+### Linux
 
----
-
-## 5. 常见环境变量速查
-
-| 变量名 | 必需 | 说明 | 示例 |
-|---|---|---|---|
-| `LONGPORT_APP_KEY` | 是 | OpenAPI 应用 Key | `abc123` |
-| `LONGPORT_APP_SECRET` | 是 | OpenAPI 应用 Secret | `secret_xyz` |
-| `LONGPORT_ACCESS_TOKEN` | 是 | 访问令牌 | `token_xxx` |
-| `CHANGQIAO_LOCALE` | 否 | 界面语言 | `zh-CN` |
-| `CHANGQIAO_LOG` | 否 | 日志过滤规则 | `error,changqiao=debug` |
-
-兼容旧变量：`LONGBRIDGE_LOCALE`、`LONGBRIDGE_LOG`。
-
----
-
-## 6. 本地状态文件
-
-程序会自动保存本地工作区和预警规则：
-
-- 工作区快照：`~/Library/Application Support/ChangQiao/workspace.json`（macOS）
-- 预警规则：`~/Library/Application Support/ChangQiao/alerts.json`（macOS）
-
-说明：
-
-1. 工作区会记录：分组、选中标的、K 线周期、日志面板开关等
-2. 预警规则支持本地 JSON 持久化，损坏时会自动备份并重置
+- 日志：`~/.local/share/changqiao/logs/`
+- 工作区：`~/.local/share/changqiao/workspace.json`
+- 预警规则：`~/.local/share/changqiao/alerts.json`
 
 ---
 
@@ -128,18 +108,18 @@ changqiao
 curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | sh
 ```
 
-### 回滚（你有备份时）
+### 回滚（有备份时）
 
 ```bash
 mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ```
 
-详细流程见：[发布日 Runbook](release_runbook_zh-CN.md)
+详细流程：[`release_runbook_zh-CN.md`](release_runbook_zh-CN.md)
 
 ---
 
 ## 8. 下一步阅读
 
-- 项目定位：[`project_positioning_zh-CN.md`](project_positioning_zh-CN.md)
 - 常见问题：[`faq_zh-CN.md`](faq_zh-CN.md)
+- 项目定位：[`project_positioning_zh-CN.md`](project_positioning_zh-CN.md)
 - 生产运维：[`production_readiness_zh-CN.md`](production_readiness_zh-CN.md)

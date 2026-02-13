@@ -1,82 +1,128 @@
-# 常见问题 FAQ（中文）
+# FAQ（实战版）
 
-## Q1：启动时报“缺少必需环境变量”怎么办？
+> 这份 FAQ 按“先止血、再定位”写法组织。遇到问题先看 Q1/Q2。
 
-先确认三项必需变量都已设置：
+---
+
+## Q1：启动失败，第一步该做什么？
+
+先跑诊断：
+
+```bash
+changqiao doctor
+```
+
+优先处理 `FAIL` 项；`WARN` 可暂时继续，但建议修复。
+
+---
+
+## Q2：提示“缺少必需环境变量”怎么办？
+
+检查 `.env` 是否包含这三项：
 
 - `LONGPORT_APP_KEY`
 - `LONGPORT_APP_SECRET`
 - `LONGPORT_ACCESS_TOKEN`
 
-建议方式：
+推荐重建：
 
 ```bash
 cp .env.example .env
-# 然后编辑 .env
+# 再填入真实值
 ```
 
 ---
 
-## Q2：启动时报“需要在交互式终端（TTY）中运行”怎么办？
+## Q3：提示“需要在交互式终端（TTY）中运行”怎么办？
 
-说明你在非交互环境启动了程序（例如重定向、某些 CI shell）。
+说明当前不是交互终端（例如输出被管道/重定向）。
 
-请在真实终端中直接执行：
+正确方式：
 
 ```bash
 changqiao
 ```
 
----
+不要写成：
 
-## Q3：启动时报“已有 changqiao 进程在运行”怎么办？
-
-这是单实例保护机制，避免多个进程互相污染终端状态。
-
-处理方式：
-
-1. 确认是否已有正在使用的实例
-2. 若是残留进程，终止后重启
+```bash
+changqiao > out.log
+```
 
 ---
 
-## Q4：页面数据不刷新，或者一直提示请求失败？
+## Q4：提示“已有 changqiao 进程在运行”怎么办？
 
-请按顺序排查：
+这是单实例保护。请先确认旧进程是否仍在运行：
 
-1. 外网连通性
-2. Token 是否过期（通常 3 个月）
-3. 是否触发限流（日志中可能有 `Rate limit error`）
+```bash
+ps aux | grep changqiao
+```
 
-可先手动刷新：`R`
+确认无误后结束残留进程，再重启。
 
 ---
 
-## Q5：日志文件在哪里？
+## Q5：行情不更新或频繁报错怎么办？
 
-默认：
+按顺序排查：
+
+1. 网络是否可用（DNS/代理）
+2. Token 是否过期（常见）
+3. 是否触发限流
+
+建议同时打开日志面板（`` ` ``）观察实时错误。
+
+---
+
+## Q6：日志在哪里？
 
 - macOS：`~/Library/Logs/ChangQiao/`
 - Linux：`~/.local/share/changqiao/logs/`
 
-若默认目录不可写，会自动降级到系统临时目录。
+默认目录不可写时，会降级到临时目录。
 
 ---
 
-## Q6：我原来用的是 `LONGBRIDGE_LOCALE`，现在还能用吗？
+## Q7：如何查看更详细日志？
 
-可以。当前版本同时支持：
+```bash
+CHANGQIAO_LOG=error,changqiao=debug changqiao
+```
 
-- 新变量：`CHANGQIAO_LOCALE`、`CHANGQIAO_LOG`
-- 旧变量：`LONGBRIDGE_LOCALE`、`LONGBRIDGE_LOG`
+本地开发时可用：
 
-优先使用新变量，旧变量用于兼容存量环境。
+```bash
+CHANGQIAO_LOG=error,changqiao=debug cargo run
+```
 
 ---
 
-## Q7：安装脚本下载失败怎么办？
+## Q8：为什么重启后还能记住上次分组和标的？
 
-先检查网络和版本号，再看是否需要指定仓库：
+程序会自动保存 `workspace.json`，包含：
+
+1. 分组
+2. 选中标的
+3. K 线周期与偏移
+4. 日志面板状态
+
+如需重置，删除本地 `workspace.json` 后重启。
+
+---
+
+## Q9：预警规则文件在哪里？
+
+- macOS：`~/Library/Application Support/ChangQiao/alerts.json`
+- Linux：`~/.local/share/changqiao/alerts.json`
+
+文件损坏时会自动备份为 `*.corrupt.*.bak` 并重置为空规则。
+
+---
+
+## Q10：安装脚本失败怎么办？
+
+可以显式指定仓库与版本：
 
 ```bash
 CHANGQIAO_REPO=longbridge/longbridge-terminal \
@@ -84,93 +130,32 @@ CHANGQIAO_VERSION=v0.7.0-preview0 \
 sh install
 ```
 
-安装脚本会优先尝试新产物，失败时回退旧产物。
-
 ---
 
-## Q8：如何快速收集问题信息给维护者？
+## Q11：提交 issue 时最好附什么？
 
-建议提供：
+请附以下信息，定位会快很多：
 
-1. 执行命令与完整报错
+1. 复现步骤（越短越好）
 2. `changqiao --version` 输出
-3. 日志文件最近 50 行
-4. 操作系统与终端类型
+3. `changqiao doctor` 输出
+4. 最近 50 行日志
+5. 操作系统与终端类型
 
 ---
 
-## Q9：哪里看发布、值班、回滚规范？
-
-- 发布：[`release_runbook_zh-CN.md`](release_runbook_zh-CN.md)
-- 值班：[`oncall_cheatsheet_zh-CN.md`](oncall_cheatsheet_zh-CN.md)
-- 生产就绪：[`production_readiness_zh-CN.md`](production_readiness_zh-CN.md)
-
----
-
-## Q10：如何一键检查我本地环境是否可启动？
-
-执行：
+## Q12：贡献代码时，`origin` 和 `upstream` 怎么配？
 
 ```bash
-changqiao doctor
-```
-
-诊断项包括：
-
-1. 交互式终端（TTY）
-2. 必需环境变量
-3. 日志目录写入权限
-4. DNS 解析能力
-5. 单实例锁状态
-
-结果判定：
-
-- `PASS`：通过
-- `WARN`：可继续，但建议处理
-- `FAIL`：阻塞项，建议先修复
-
----
-
-## Q11：重启后为什么还能记住我上次看的分组和标的？
-
-程序会在退出时自动保存工作区快照（`workspace.json`），包括：
-
-1. 当前分组
-2. 选中的自选标的
-3. K 线周期与偏移
-4. 日志面板开关状态
-
-如需重置，可删除本地 `workspace.json` 后重启。
-
----
-
-## Q12：本地预警规则文件在哪里？
-
-macOS 默认路径：
-
-```text
-~/Library/Application Support/ChangQiao/alerts.json
-```
-
-文件损坏时程序会自动备份为 `*.corrupt.*.bak` 并重置为空规则集合。
-
----
-
-## Q13：贡献代码时，`origin` 和 `upstream` 应该怎么配？
-
-推荐使用标准 Fork 结构：
-
-```bash
-# origin 指向你的 fork（用于推送分支）
+# origin -> 你的 fork
 git remote set-url origin git@github.com:<your-username>/longbridge-terminal.git
 
-# upstream 指向官方仓库（用于同步主线）
+# upstream -> 官方仓库
 git remote add upstream https://github.com/longbridge/longbridge-terminal \
   || git remote set-url upstream https://github.com/longbridge/longbridge-terminal
-git remote -v
 ```
 
-建议每次开发前先同步：
+开发前建议：
 
 ```bash
 git fetch upstream
@@ -178,4 +163,10 @@ git checkout main
 git rebase upstream/main
 ```
 
-如果你看到多个远程都指向同一个仓库（例如 `origin` 和另一个自定义远程重复），可删除重复远程，保持 `origin + upstream` 两个即可。
+---
+
+## Q13：发布/值班/回滚规范看哪里？
+
+- 发布：[`release_runbook_zh-CN.md`](release_runbook_zh-CN.md)
+- 值班：[`oncall_cheatsheet_zh-CN.md`](oncall_cheatsheet_zh-CN.md)
+- 生产就绪：[`production_readiness_zh-CN.md`](production_readiness_zh-CN.md)
