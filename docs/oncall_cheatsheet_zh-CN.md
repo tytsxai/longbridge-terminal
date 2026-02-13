@@ -11,7 +11,9 @@
 
 1. 检查并补齐：`LONGPORT_APP_KEY`、`LONGPORT_APP_SECRET`、`LONGPORT_ACCESS_TOKEN`。
 2. 确认在交互式终端（TTY）运行，而不是后台管道。
-3. 重启：`changqiao`。
+3. 若终端托管环境使用了 `CHANGQIAO_LOG_DIR` / `CHANGQIAO_DATA_DIR`，确认目录可写。
+4. 若 `doctor` 告警 `.env` 权限过宽，先执行 `chmod 600 .env`。
+5. 重启：`changqiao`。
 
 补充：可先执行 `changqiao --version` 验证二进制可用；若输出正常但 `changqiao` 启动时报“已有 changqiao 进程在运行，请先关闭后再启动。”，说明存在残留进程或并发启动。
 
@@ -80,6 +82,7 @@ mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 ## 5) 标准回滚步骤
 
 ```bash
+# install 脚本升级时会自动备份；这里可手动再覆盖一次确保最新备份
 cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev
 # 部署新版本...
 # 出现故障则回滚：

@@ -14,6 +14,8 @@ cargo clippy -- -D warnings
 cargo test
 cargo check
 ./scripts/release_preflight.sh
+LONGPORT_APP_KEY=dummy LONGPORT_APP_SECRET=dummy LONGPORT_ACCESS_TOKEN=dummy \
+  cargo run -- doctor
 ```
 
 ### 1.2 运行环境
@@ -33,8 +35,21 @@ cargo check
 - `LONGPORT_REGION`（示例：`cn`）
 - `CHANGQIAO_LOCALE`（示例：`zh-CN` / `en`）
 - `CHANGQIAO_LOG`（示例：`error,changqiao=info`）
+- `CHANGQIAO_LOG_DIR`（终端托管时建议显式指定，如 `/var/log/changqiao`）
+- `CHANGQIAO_DATA_DIR`（终端托管时建议显式指定，如 `/var/lib/changqiao`）
 - 兼容旧变量：`LONGBRIDGE_LOCALE`、`LONGBRIDGE_LOG`
 - `LONGPORT_HTTP_URL`、`LONGPORT_QUOTE_WS_URL`（私有化场景）
+
+### 1.4 部署形态决策（建议）
+
+默认建议：
+
+1. **主形态：终端托管（跳板机 / 运维主机 + tmux）**
+   - 优点：统一发布、统一日志、统一回滚，值班成本低。
+2. **备形态：个人本地终端**
+   - 优点：网络路径短、个人调试灵活。
+
+无论哪种形态，`changqiao` 都要求交互式 TTY；仅支持前台运行，不建议守护化后台常驻。
 
 ## 2. 关键稳定性机制（当前已具备）
 
@@ -57,6 +72,8 @@ cargo check
 - 缺少配置会输出明确引导并以非 0 退出码失败。
 - 缺少配置会在真正初始化 SDK 前被预检并明确列出缺失变量名。
 - 非 TTY 启动会直接拒绝运行，避免在 CI/后台脚本中“假启动”。
+- `doctor` 已覆盖状态目录可写性检查（工作区/预警规则）。
+- `doctor` 已覆盖 `.env` 权限基线检查（Unix 下提示 `chmod 600 .env`）。
 
 ### 2.3 日志容错
 
@@ -88,6 +105,7 @@ cargo check
 - `curl --fail --location --show-error`，下载失败不继续。
 - 使用临时目录并 `trap` 清理。
 - 使用 `install -m 0755` 原子覆盖目标二进制。
+- 覆盖前自动备份旧版本到 `/usr/local/bin/changqiao.prev`，保障快速回滚。
 
 ### 3.2 推荐发布流程
 

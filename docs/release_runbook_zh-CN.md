@@ -24,6 +24,8 @@ cargo check
 # 可执行文件基础可运维性检查（无需 TTY）
 cargo run -- --help > /dev/null
 cargo run -- --version > /dev/null
+LONGPORT_APP_KEY=dummy LONGPORT_APP_SECRET=dummy LONGPORT_ACCESS_TOKEN=dummy \
+  cargo run -- doctor > /dev/null
 ```
 
 必须全绿，任何一项失败禁止发布。
@@ -38,9 +40,16 @@ cargo run -- --version > /dev/null
 
 并确认 Token 未过期（有效期通常 3 个月）。
 
+若部署在终端托管环境（跳板机/运维主机），建议同时固定目录：
+
+- `CHANGQIAO_LOG_DIR=/var/log/changqiao`
+- `CHANGQIAO_DATA_DIR=/var/lib/changqiao`
+
 ### 1.3 回滚预案就绪
 
-先备份线上旧版本二进制：
+安装脚本升级时会自动备份旧版本到 `/usr/local/bin/changqiao.prev`。
+
+发布前建议再手动确认备份文件存在（避免误删或权限问题）：
 
 ```bash
 cp /usr/local/bin/changqiao /usr/local/bin/changqiao.prev

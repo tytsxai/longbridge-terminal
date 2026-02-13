@@ -33,6 +33,24 @@ cp .env.example .env
 
 ---
 
+## Q2.1：`doctor` 提示 “.env 权限过宽” 怎么办？
+
+这是安全基线告警：你的凭证文件可能被同机其他用户读取。
+
+修复命令（macOS/Linux）：
+
+```bash
+chmod 600 .env
+```
+
+再执行一次：
+
+```bash
+changqiao doctor
+```
+
+---
+
 ## Q3：提示“需要在交互式终端（TTY）中运行”怎么办？
 
 说明当前不是交互终端（例如输出被管道/重定向）。
@@ -82,6 +100,13 @@ ps aux | grep changqiao
 
 默认目录不可写时，会降级到临时目录。
 
+如果你希望在终端托管环境中固定目录，配置：
+
+```bash
+CHANGQIAO_LOG_DIR=/var/log/changqiao
+CHANGQIAO_DATA_DIR=/var/lib/changqiao
+```
+
 ---
 
 ## Q7：如何查看更详细日志？
@@ -129,6 +154,8 @@ CHANGQIAO_REPO=longbridge/longbridge-terminal \
 CHANGQIAO_VERSION=v0.7.0-preview0 \
 sh install
 ```
+
+补充：安装成功时若检测到旧版二进制，脚本会自动备份到 `/usr/local/bin/changqiao.prev`，故障时可直接回滚。
 
 ---
 

@@ -21,6 +21,8 @@ changqiao
 
 如果第 3 步里 `doctor` 出现 `FAIL`，先解决再启动。
 
+安装说明：若本机已有旧版 `changqiao`，安装脚本会自动备份到 `/usr/local/bin/changqiao.prev`，可直接回滚。
+
 ---
 
 ## 2. 安装后先确认三件事
@@ -52,6 +54,9 @@ LONGPORT_ACCESS_TOKEN=your_access_token
 ```bash
 CHANGQIAO_LOCALE=zh-CN
 CHANGQIAO_LOG=error,changqiao=info
+# 终端托管时建议固定目录，方便采集与备份
+CHANGQIAO_LOG_DIR=/var/log/changqiao
+CHANGQIAO_DATA_DIR=/var/lib/changqiao
 ```
 
 ---
@@ -68,6 +73,7 @@ CHANGQIAO_LOG=error,changqiao=info
 2. stdout 不是 TTY：不要在重定向/非交互 shell 中启动
 3. DNS 失败：先确认网络与代理
 4. 单实例锁冲突：确认是否已有 changqiao 进程在运行
+5. `.env` 权限过宽：执行 `chmod 600 .env`，避免凭证被其他本机用户读取
 
 ---
 
@@ -108,7 +114,7 @@ CHANGQIAO_LOG=error,changqiao=info
 curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | sh
 ```
 
-### 回滚（有备份时）
+### 回滚（安装脚本默认会自动备份）
 
 ```bash
 mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao

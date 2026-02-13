@@ -22,6 +22,7 @@
 │   ├── doctor.rs               # 诊断链路：TTY/ENV/日志目录/DNS/单实例锁
 │   ├── workspace.rs            # 工作区快照：启动恢复、退出持久化
 │   ├── alerts.rs               # 预警规则：本地 JSON 存储、命中评估、冷却策略
+│   ├── path_env.rs             # 环境变量路径覆盖：日志/状态目录配置解析
 │   ├── app.rs                  # 运行编排中心：状态机、事件循环、渲染调度
 │   ├── api/                    # 业务语义层（账户/行情/搜索）
 │   ├── openapi/                # SDK 调用策略层（限流/重试/上下文）
@@ -54,6 +55,7 @@
 5. `openapi` 负责调用策略，`api` 负责业务语义；不得混层。
 6. `views/widgets` 不直接初始化 SDK；数据由上游注入。
 7. `app -> alerts`：行情更新后触发规则评估，命中后写日志并持久化。
+8. `logger/workspace/alerts/instance_lock -> path_env`：目录覆盖解析统一复用，不重复读环境变量逻辑。
 
 ---
 
@@ -98,7 +100,11 @@ make check-all
 ## 本次架构能力快照（2026-02-13）
 
 - 已支持 `changqiao doctor` 非交互诊断链路。
+- `doctor` 已覆盖状态目录写入能力与 `.env` 权限基线检查。
 - 已支持工作区快照自动恢复与退出持久化。
 - 已支持本地预警规则存储与实时命中评估。
+- 已支持 `CHANGQIAO_LOG_DIR` / `CHANGQIAO_DATA_DIR` 覆盖目录，适配终端托管部署。
 - 已引入 `Makefile` 统一质量检查入口。
+- 安装脚本升级时会自动备份旧二进制到 `/usr/local/bin/changqiao.prev`。
+- 发布前置检查已纳入 `doctor` 命令冒烟验证。
 - 核心用户文档已改为“实战导向”结构。

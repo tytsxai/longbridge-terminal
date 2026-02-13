@@ -19,7 +19,7 @@
 - 股票搜索、个股详情、K 线
 - 工作区自动记忆（分组/选中标的/K 线周期等）
 - 本地预警规则持久化（`alerts.json`）
-- `doctor` 一键诊断（TTY/环境变量/日志目录/DNS/单实例）
+- `doctor` 一键诊断（TTY/环境变量/日志目录/状态目录/.env 权限/DNS/单实例）
 
 ---
 
@@ -30,6 +30,8 @@
 ```bash
 curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | sh
 ```
+
+> 安装脚本会在覆盖前自动备份旧版本到 `/usr/local/bin/changqiao.prev`。
 
 ### 步骤 2：准备凭证
 
@@ -93,6 +95,8 @@ changqiao             # 启动主程序
 
 - `CHANGQIAO_LOCALE`：界面语言（如 `zh-CN` / `en`）
 - `CHANGQIAO_LOG`：日志级别（如 `error,changqiao=info`）
+- `CHANGQIAO_LOG_DIR`：日志目录（用于终端托管环境）
+- `CHANGQIAO_DATA_DIR`：状态目录（`workspace/alerts/lock`）
 - `LONGPORT_REGION`
 - `LONGPORT_HTTP_URL` / `LONGPORT_QUOTE_WS_URL`
 
