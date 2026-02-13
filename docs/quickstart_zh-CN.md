@@ -21,6 +21,7 @@ curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | s
 ```bash
 changqiao --version
 changqiao --help
+changqiao doctor
 ```
 
 > 安装脚本兼容新旧发布产物：优先下载 `changqiao-terminal`，不存在时自动回退到 `longbridge-terminal`。
@@ -49,6 +50,14 @@ LONGPORT_ACCESS_TOKEN=your_access_token
 CHANGQIAO_LOCALE=zh-CN
 CHANGQIAO_LOG=error,changqiao=info
 ```
+
+建议在首次启动前做一次诊断：
+
+```bash
+changqiao doctor
+```
+
+若 `doctor` 输出 `FAIL`，请先修复后再启动。
 
 ---
 
@@ -97,7 +106,21 @@ changqiao
 
 ---
 
-## 6. 升级与回滚
+## 6. 本地状态文件
+
+程序会自动保存本地工作区和预警规则：
+
+- 工作区快照：`~/Library/Application Support/ChangQiao/workspace.json`（macOS）
+- 预警规则：`~/Library/Application Support/ChangQiao/alerts.json`（macOS）
+
+说明：
+
+1. 工作区会记录：分组、选中标的、K 线周期、日志面板开关等
+2. 预警规则支持本地 JSON 持久化，损坏时会自动备份并重置
+
+---
+
+## 7. 升级与回滚
 
 ### 升级
 
@@ -115,7 +138,7 @@ mv /usr/local/bin/changqiao.prev /usr/local/bin/changqiao
 
 ---
 
-## 7. 下一步阅读
+## 8. 下一步阅读
 
 - 项目定位：[`project_positioning_zh-CN.md`](project_positioning_zh-CN.md)
 - 常见问题：[`faq_zh-CN.md`](faq_zh-CN.md)

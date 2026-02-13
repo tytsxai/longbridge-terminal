@@ -19,14 +19,35 @@
    cd longbridge-terminal
    ```
 
-2. 配置凭证：
+2. （推荐）配置 Fork 远程：
+
+   ```bash
+   # origin 指向你的 fork（用于 push）
+   git remote set-url origin git@github.com:<your-username>/longbridge-terminal.git
+
+   # upstream 指向官方仓库（用于同步）
+   git remote add upstream https://github.com/longbridge/longbridge-terminal \
+     || git remote set-url upstream https://github.com/longbridge/longbridge-terminal
+   git remote -v
+   ```
+
+   期望结果示例：
+
+   ```text
+   origin   git@github.com:<your-username>/longbridge-terminal.git (fetch)
+   origin   git@github.com:<your-username>/longbridge-terminal.git (push)
+   upstream https://github.com/longbridge/longbridge-terminal (fetch)
+   upstream https://github.com/longbridge/longbridge-terminal (push)
+   ```
+
+3. 配置凭证：
 
    ```bash
    cp .env.example .env
    # 编辑 .env，填入 LONGPORT_APP_KEY / LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN
    ```
 
-3. 运行程序：
+4. 运行程序：
 
    ```bash
    cargo run
@@ -100,14 +121,28 @@ python3 -m pip install pyyaml
    git checkout -b feature/your-change
    ```
 
-2. 按模块完成改动并自测通过。
+2. 与上游同步（建议每次开发前执行）：
 
-3. 提交变更：
+   ```bash
+   git fetch upstream
+   git checkout main
+   git rebase upstream/main
+   ```
+
+3. 按模块完成改动并自测通过。
+
+4. 提交变更：
 
    - 提交信息要清晰描述目的与范围
    - 避免把不相关改动混在同一次提交
 
-4. 发起 Pull Request：
+5. 推送到 fork 并发起 Pull Request：
+
+   ```bash
+   git push -u origin <your-branch>
+   ```
+
+6. 发起 Pull Request：
 
    - 说明变更背景、核心改动、验证结果
    - 如涉及界面变化，可附截图或录屏

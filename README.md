@@ -37,6 +37,8 @@
 - 多市场支持（港股、美股、A 股）
 - 基于 Rust + Ratatui 构建
 - Vim 风格快捷键
+- 工作区自动记忆（分组、选中标的、K 线周期等）
+- 本地价格预警规则引擎（JSON 持久化）
 
 ---
 
@@ -59,6 +61,7 @@ curl -sSL https://github.com/longbridge/longbridge-terminal/raw/main/install | s
 
 ```bash
 changqiao --help
+changqiao doctor
 ```
 
 ### 4.2 配置凭证
@@ -81,6 +84,14 @@ LONGPORT_APP_KEY=your_app_key
 LONGPORT_APP_SECRET=your_app_secret
 LONGPORT_ACCESS_TOKEN=your_access_token
 ```
+
+如需快速自检环境，请先运行：
+
+```bash
+changqiao doctor
+```
+
+`doctor` 会检查：TTY、必需环境变量、日志目录写入、DNS 解析、单实例锁。
 
 ### 4.3 启动
 
@@ -143,6 +154,9 @@ changqiao
 
 ### 深入阅读
 
+- [产品战略（中文）](docs/product_strategy_zh-CN.md)
+- [Roadmap（2026 Q2，中文）](docs/roadmap_2026Q2_zh-CN.md)
+- [预警中心 PRD（中文）](docs/prd_alert_center_zh-CN.md)
 - [限流设计说明（中文）](docs/rate_limiting_zh-CN.md)
 - [渲染优化说明（中文）](docs/render_optimization_zh-CN.md)
 - [中文化检查清单（中文）](docs/chinese_localization_checklist_zh-CN.md)
@@ -163,6 +177,32 @@ changqiao
 - 本项目为实验性工具，请勿将其视为投资建议。
 - Access Token 通常 3 个月过期，需定期续期。
 - Longport OpenAPI 存在调用频率限制（默认建议不超过每秒 10 次请求）。
+
+---
+
+## 9. 贡献者 Git 远程约定
+
+如果你要向官方仓库提交 PR，建议使用标准 Fork 远程结构：
+
+```bash
+# origin：你的 fork（用于 push）
+git remote set-url origin git@github.com:<your-username>/longbridge-terminal.git
+
+# upstream：官方仓库（用于同步）
+git remote add upstream https://github.com/longbridge/longbridge-terminal \
+  || git remote set-url upstream https://github.com/longbridge/longbridge-terminal
+git remote -v
+```
+
+建议在每次开发前先同步上游：
+
+```bash
+git fetch upstream
+git checkout main
+git rebase upstream/main
+```
+
+完整流程见：[`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ---
 

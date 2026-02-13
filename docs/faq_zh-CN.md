@@ -104,3 +104,78 @@ sh install
 - 发布：[`release_runbook_zh-CN.md`](release_runbook_zh-CN.md)
 - 值班：[`oncall_cheatsheet_zh-CN.md`](oncall_cheatsheet_zh-CN.md)
 - 生产就绪：[`production_readiness_zh-CN.md`](production_readiness_zh-CN.md)
+
+---
+
+## Q10：如何一键检查我本地环境是否可启动？
+
+执行：
+
+```bash
+changqiao doctor
+```
+
+诊断项包括：
+
+1. 交互式终端（TTY）
+2. 必需环境变量
+3. 日志目录写入权限
+4. DNS 解析能力
+5. 单实例锁状态
+
+结果判定：
+
+- `PASS`：通过
+- `WARN`：可继续，但建议处理
+- `FAIL`：阻塞项，建议先修复
+
+---
+
+## Q11：重启后为什么还能记住我上次看的分组和标的？
+
+程序会在退出时自动保存工作区快照（`workspace.json`），包括：
+
+1. 当前分组
+2. 选中的自选标的
+3. K 线周期与偏移
+4. 日志面板开关状态
+
+如需重置，可删除本地 `workspace.json` 后重启。
+
+---
+
+## Q12：本地预警规则文件在哪里？
+
+macOS 默认路径：
+
+```text
+~/Library/Application Support/ChangQiao/alerts.json
+```
+
+文件损坏时程序会自动备份为 `*.corrupt.*.bak` 并重置为空规则集合。
+
+---
+
+## Q13：贡献代码时，`origin` 和 `upstream` 应该怎么配？
+
+推荐使用标准 Fork 结构：
+
+```bash
+# origin 指向你的 fork（用于推送分支）
+git remote set-url origin git@github.com:<your-username>/longbridge-terminal.git
+
+# upstream 指向官方仓库（用于同步主线）
+git remote add upstream https://github.com/longbridge/longbridge-terminal \
+  || git remote set-url upstream https://github.com/longbridge/longbridge-terminal
+git remote -v
+```
+
+建议每次开发前先同步：
+
+```bash
+git fetch upstream
+git checkout main
+git rebase upstream/main
+```
+
+如果你看到多个远程都指向同一个仓库（例如 `origin` 和另一个自定义远程重复），可删除重复远程，保持 `origin + upstream` 两个即可。
