@@ -5,8 +5,11 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
+use std::collections::VecDeque;
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 /// 判断文件名是否为 changqiao/longbridge 日志文件
 fn is_log_file_name(name: &str) -> bool {
@@ -51,24 +54,31 @@ fn get_latest_log_file() -> Option<PathBuf> {
 }
 
 /// Read the last N lines from the log file
-fn read_last_lines(path: &PathBuf, count: usize) -> Vec<String> {
-    match fs::read_to_string(path) {
-        Ok(content) => {
-            let lines: Vec<String> = content
-                .lines()
-                .map(std::string::ToString::to_string)
-                .collect();
-            let start = lines.len().saturating_sub(count);
-            lines[start..].to_vec()
+fn read_last_lines(path: &Path, count: usize) -> Vec<String> {
+    let max_lines = count.max(1);
+    let Ok(file) = std::fs::File::open(path) else {
+        return vec![];
+    };
+    let reader = BufReader::new(file);
+    let mut tail = VecDeque::with_capacity(max_lines);
+
+    for line in reader.lines().map_while(Result::ok) {
+        if tail.len() == max_lines {
+            tail.pop_front();
         }
-        Err(_) => vec![],
+        tail.push_back(line);
     }
+
+    tail.into_iter().collect()
 }
 
 /// Log panel widget
 pub struct LogPanel {
     lines: Vec<String>,
     visible: bool,
+    last_log_file: Option<PathBuf>,
+    last_modified: Option<SystemTime>,
+    last_size: u64,
 }
 
 impl LogPanel {
@@ -77,14 +87,37 @@ impl LogPanel {
         Self {
             lines: Vec::new(),
             visible: false,
+            last_log_file: None,
+            last_modified: None,
+            last_size: 0,
         }
     }
 
     /// Refresh log content from file
     pub fn refresh(&mut self) {
         if let Some(log_file) = get_latest_log_file() {
+            let metadata = fs::metadata(&log_file).ok();
+            let modified = metadata.as_ref().and_then(|m| m.modified().ok());
+            let size = metadata.as_ref().map_or(0, std::fs::Metadata::len);
+            let unchanged = self.last_log_file.as_ref() == Some(&log_file)
+                && self.last_modified == modified
+                && self.last_size == size;
+
+            if unchanged {
+                return;
+            }
+
             self.lines = read_last_lines(&log_file, 100);
+            self.last_log_file = Some(log_file);
+            self.last_modified = modified;
+            self.last_size = size;
+            return;
         }
+
+        self.lines.clear();
+        self.last_log_file = None;
+        self.last_modified = None;
+        self.last_size = 0;
     }
 
     /// Set visibility
@@ -165,5 +198,51 @@ impl LogPanel {
 impl Default for LogPanel {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_log_file_name, read_last_lines};
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempFileGuard {
+        path: PathBuf,
+    }
+
+    impl TempFileGuard {
+        fn new() -> Self {
+            let unique = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or_default();
+            let path = std::env::temp_dir().join(format!("changqiao-log-panel-{unique}.log"));
+            Self { path }
+        }
+    }
+
+    impl Drop for TempFileGuard {
+        fn drop(&mut self) {
+            _ = std::fs::remove_file(&self.path);
+        }
+    }
+
+    #[test]
+    fn reads_last_lines_from_log_file() {
+        let guard = TempFileGuard::new();
+        std::fs::write(&guard.path, "line1\nline2\nline3\nline4\nline5\n")
+            .expect("failed to write temp log");
+
+        let lines = read_last_lines(&guard.path, 2);
+        assert_eq!(lines, vec!["line4".to_string(), "line5".to_string()]);
+    }
+
+    #[test]
+    fn recognizes_expected_log_file_name() {
+        assert!(is_log_file_name("changqiao.log"));
+        assert!(is_log_file_name("longbridge.2026-02-13.log"));
+        assert!(!is_log_file_name("changqiao.txt"));
+        assert!(!is_log_file_name("random.log"));
     }
 }

@@ -133,10 +133,28 @@ if [ ! -f "$source_path" ]; then
   exit 1
 fi
 
+target_path="/usr/local/bin/$bin_name"
+backup_path="/usr/local/bin/$bin_name.prev"
+
+backup_existing_binary() {
+  if [ ! -f "$target_path" ]; then
+    return 0
+  fi
+
+  if test $(id -u) -eq 0; then
+    cp "$target_path" "$backup_path"
+  else
+    sudo cp "$target_path" "$backup_path"
+  fi
+  echo "已备份当前版本到：$backup_path"
+}
+
+backup_existing_binary
+
 if test $(id -u) -eq 0; then
-  install -m 0755 "$source_path" "/usr/local/bin/$bin_name"
+  install -m 0755 "$source_path" "$target_path"
 else
-  sudo install -m 0755 "$source_path" "/usr/local/bin/$bin_name"
+  sudo install -m 0755 "$source_path" "$target_path"
 fi
 
 if [ "$selected_package_name" = "$legacy_package_name" ]; then

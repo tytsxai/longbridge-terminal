@@ -62,6 +62,8 @@ pub fn run() -> i32 {
         check_tty(),
         check_required_env(),
         check_log_dir(),
+        check_state_store_dir(),
+        check_env_file_permission(),
         check_dns_resolution(),
         check_instance_lock(),
     ];
@@ -139,6 +141,94 @@ fn check_log_dir() -> CheckItem {
     }
 
     CheckItem::pass("日志目录写入", format!("可写：{}。", primary.display()))
+}
+
+fn check_state_store_dir() -> CheckItem {
+    let targets = vec![
+        ("工作区", crate::workspace::workspace_file_path()),
+        ("预警规则", crate::alerts::alert_store_path()),
+    ];
+
+    let mut writable = Vec::new();
+    let mut failures = Vec::new();
+
+    for (name, file_path) in targets {
+        let Some(parent) = file_path.parent() else {
+            failures.push(format!("{name}目录路径无效：{}", file_path.display()));
+            continue;
+        };
+
+        match ensure_writable_dir(parent) {
+            Ok(()) => writable.push(format!("{name}:{}", parent.display())),
+            Err(err) => failures.push(format!("{name}:{}（{}）", parent.display(), err)),
+        }
+    }
+
+    if failures.is_empty() {
+        return CheckItem::pass("状态目录写入", format!("可写：{}。", writable.join("，")));
+    }
+
+    if writable.is_empty() {
+        return CheckItem::warn(
+            "状态目录写入",
+            format!(
+                "不可写：{}。运行可继续，但工作区/预警无法持久化。",
+                failures.join("；")
+            ),
+        );
+    }
+
+    CheckItem::warn(
+        "状态目录写入",
+        format!(
+            "部分目录不可写：{}；可写目录：{}。运行可继续，但写失败会丢失状态。",
+            failures.join("；"),
+            writable.join("，")
+        ),
+    )
+}
+
+#[cfg(unix)]
+fn check_env_file_permission() -> CheckItem {
+    use std::os::unix::fs::PermissionsExt;
+
+    let env_path = Path::new(".env");
+    if !env_path.exists() {
+        return CheckItem::pass("凭证文件权限", ".env 不存在（使用环境变量注入）。");
+    }
+
+    let metadata = match std::fs::metadata(env_path) {
+        Ok(metadata) => metadata,
+        Err(err) => {
+            return CheckItem::warn("凭证文件权限", format!("无法读取 .env 权限：{err}"));
+        }
+    };
+
+    let mode = metadata.permissions().mode() & 0o777;
+    if env_mode_is_secure(mode) {
+        CheckItem::pass(
+            "凭证文件权限",
+            format!(".env 权限 {mode:o}，符合最小暴露原则。"),
+        )
+    } else {
+        CheckItem::warn(
+            "凭证文件权限",
+            format!(
+                ".env 权限 {mode:o} 过宽，建议执行：chmod 600 .env（避免凭证被其他用户读取）。"
+            ),
+        )
+    }
+}
+
+#[cfg(not(unix))]
+fn check_env_file_permission() -> CheckItem {
+    CheckItem::pass("凭证文件权限", "当前平台未启用 Unix 权限位检查。")
+}
+
+#[cfg(unix)]
+fn env_mode_is_secure(mode: u32) -> bool {
+    const GROUP_OR_OTHER_PERMISSION_BITS: u32 = 0o077;
+    (mode & GROUP_OR_OTHER_PERMISSION_BITS) == 0
 }
 
 fn check_dns_resolution() -> CheckItem {
@@ -259,6 +349,8 @@ fn endpoint_to_host_port(raw: &str, default_port: u16) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::endpoint_to_host_port;
+    #[cfg(unix)]
+    use super::env_mode_is_secure;
 
     #[test]
     fn parses_https_endpoint() {
@@ -282,5 +374,14 @@ mod tests {
             endpoint_to_host_port("https://[2001:db8::1]:8443/ws", 443),
             Some("[2001:db8::1]:8443".to_string())
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn env_file_mode_validation_is_correct() {
+        assert!(env_mode_is_secure(0o600));
+        assert!(env_mode_is_secure(0o400));
+        assert!(!env_mode_is_secure(0o644));
+        assert!(!env_mode_is_secure(0o666));
     }
 }
