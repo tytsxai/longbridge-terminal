@@ -1,0 +1,55 @@
+# Longbridge Terminal (changqiao)
+
+> Experimental **terminal stock TUI** built on [Longport OpenAPI](https://open.longbridge.com): watchlists, live quotes, portfolio/holdings, search, and candlestick charts. Stack: Rust, Tokio, Ratatui, longport SDK. Binary/package name: `changqiao` (version in Cargo.toml, currently preview).
+
+Chinese positioning: 长桥终端。命令行看盘与持仓的实验性 TUI + Longport SDK 参考工程；不是自动交易机器人。
+
+## Key docs
+
+- [README.md](README.md) / [README_zh-CN.md](README_zh-CN.md): Overview and quick start
+- [docs/quickstart_zh-CN.md](docs/quickstart_zh-CN.md): 5-minute onboarding
+- [docs/project_positioning_zh-CN.md](docs/project_positioning_zh-CN.md): Positioning
+- [docs/faq_zh-CN.md](docs/faq_zh-CN.md): FAQ
+- [docs/rate_limiting_zh-CN.md](docs/rate_limiting_zh-CN.md): Rate limiting
+- [docs/production_readiness_zh-CN.md](docs/production_readiness_zh-CN.md): Production checklist
+
+## What it does
+
+- Real-time watchlist and market data
+- Asset overview and holdings
+- Symbol search and quotes
+- Candlestick (K-line) charts
+- Multi-market: HK, US, CN A-shares
+- Vim-style keybindings; i18n via `CHANGQIAO_LOCALE`
+
+## What it does NOT do
+
+- ❌ Automated order placement / trading bots
+- ❌ HFT or institutional gateway features
+- ❌ Investment advice
+
+## Config (env)
+
+Required: `LONGPORT_APP_KEY`, `LONGPORT_APP_SECRET`, `LONGPORT_ACCESS_TOKEN`  
+Optional: `CHANGQIAO_LOCALE`, `CHANGQIAO_LOG`, `LONGPORT_REGION`, `LONGPORT_HTTP_URL`, `LONGPORT_QUOTE_WS_URL`  
+Legacy aliases: `LONGBRIDGE_LOCALE`, `LONGBRIDGE_LOG`
+
+## Quick start
+
+```bash
+cp .env.example .env   # fill Longport credentials
+cargo build --release
+./target/release/changqiao
+# or: install script / packaged `changqiao` binary
+```
+
+## Repository
+
+- GitHub (this fork/mirror): https://github.com/tytsxai/longbridge-terminal
+- Upstream install script historically: https://github.com/longbridge/longbridge-terminal
+- License: MIT
+- Stack: Rust 2021, Ratatui, longport, Tokio
+
+## Useful search phrases
+
+- Longbridge terminal, Longport OpenAPI TUI, 长桥终端, Rust stock terminal, Ratatui 行情, changqiao, 命令行看盘, HK US A-share CLI, Longport SDK example

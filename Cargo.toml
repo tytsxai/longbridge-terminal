@@ -2,6 +2,20 @@
 edition = "2021"
 name = "changqiao"
 version = "0.7.0-preview0"
+description = "Experimental Longbridge/Longport OpenAPI stock terminal TUI (changqiao) — watchlist, quotes, portfolio, K-line"
+license = "MIT"
+readme = "README.md"
+keywords = [
+    "longbridge",
+    "longport",
+    "tui",
+    "stock",
+    "trading",
+]
+categories = ["command-line-utilities", "visualization"]
+repository = "https://github.com/tytsxai/longbridge-terminal"
+homepage = "https://github.com/tytsxai/longbridge-terminal"
+documentation = "https://github.com/tytsxai/longbridge-terminal#readme"
 
 [profile.release]
 debug = true               # Release build 时也生成 Debug Info
